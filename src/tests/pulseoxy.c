@@ -101,6 +101,7 @@ unsigned char lpeek(long address) {
 
 void lcopy(long source_address, long destination_address, unsigned int count) {
 
+
   dmalist.option_0b=0x0b;
   dmalist.option_80=0x80;
   dmalist.source_mb=source_address>>20;
