@@ -345,7 +345,7 @@ i2csimulate: $(GHDL) $(VHDLSRCDIR)/test_i2c.vhdl $(VHDLSRCDIR)/i2c_master.vhdl $
 k2simulate: $(GHDL) $(VHDLSRCDIR)/testkey.vhdl $(VHDLSRCDIR)/mega65kbd_to_matrix.vhdl
 	$(GHDL) -i $(VHDLSRCDIR)/testkey.vhdl $(VHDLSRCDIR)/mega65kbd_to_matrix.vhdl
 	$(GHDL) -m testkey
-	( ./testkey || $(GHDL) -r testkey ) 
+	( ./testkey || $(GHDL) -r testkey )
 
 
 fpacksimulate: $(GHDL) $(VHDLSRCDIR)/test_framepacker.vhdl $(VHDLSRCDIR)/framepacker.vhdl
@@ -437,13 +437,16 @@ $(TESTDIR)/vicii.prg:       $(TESTDIR)/vicii.c $(TESTDIR)/vicii_asm.s $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $< $(TESTDIR)/vicii_asm.s
 
 $(TESTDIR)/pulseoxy.prg:       $(TESTDIR)/pulseoxy.c $(CC65)
-	$(CL65) -O -o $*.prg --mapfile $*.map $< 
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
+
+$(TESTDIR)/helloworld.prg:       $(TESTDIR)/helloworld.c $(CC65)
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
 $(TESTDIR)/unicorns.prg:       $(TESTDIR)/unicorns.c $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
 $(TESTDIR)/eth_mdio.prg:       $(TESTDIR)/eth_mdio.c $(CC65)
-	$(CL65) -O -o $*.prg --mapfile $*.map $< 
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
 $(TESTDIR)/instructiontiming.prg:       $(TESTDIR)/instructiontiming.c $(TESTDIR)/instructiontiming_asm.s $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $< $(TESTDIR)/instructiontiming_asm.s
