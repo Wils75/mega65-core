@@ -73,7 +73,8 @@ void lpoke(long address, unsigned char value) {
 
 }
 
-unsigned char lpeek(long address) {
+unsigned char lpeek(long address)
+{
 
   dmalist.option_0b=0x0b;
   dmalist.option_80=0x80;
@@ -99,8 +100,8 @@ unsigned char lpeek(long address) {
 
 }
 
-void lcopy(long source_address, long destination_address, unsigned int count) {
-
+void lcopy(long source_address, long destination_address, unsigned int count)
+{
 
   dmalist.option_0b=0x0b;
   dmalist.option_80=0x80;
@@ -127,7 +128,8 @@ void lcopy(long source_address, long destination_address, unsigned int count) {
 
 }
 
-void lfill(long destination_address, unsigned char value, unsigned int count) {
+void lfill(long destination_address, unsigned char value, unsigned int count)
+{
 
   dmalist.option_0b=0x0b;
   dmalist.option_80=0x80;
@@ -157,6 +159,9 @@ unsigned int tempCounter, drawCounter;
 unsigned int heartIterator;
 unsigned char frame[5];
 unsigned char lineColour;
+
+unsigned short char1, char2, char3, divisor;
+
 unsigned int heartData[30] = {49,
                              50,
                              53,
@@ -221,76 +226,56 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
               /*24*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 },
               /*25*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 }};
 
-  unsigned short nums[70][6] = {{102, 102, 102, 32, 32, 102},
-                                {102, 102, 32, 32, 32, 102},
-                                {102, 32, 32, 32, 32, 102},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 102, 32, 32, 102, 102},
-                                {102, 32, 32, 102, 102, 102},
-                                {32, 32, 32, 32, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 32, 32, 32, 102},
-                                {102, 102, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {102, 102, 102, 32, 32, 32},
-                                {102, 102, 32, 32, 32, 32},
-                                {102, 32, 32, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 32, 32, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102,102, 32, 32},
-                                {32, 32, 32, 32, 32, 32},
-                                {32, 32, 102, 102, 102, 102},
-                                {32, 32, 32, 32, 32, 102},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {102, 102, 32, 32, 32, 102},
-                                {102, 32, 32, 102, 102, 102},
-                                {32, 32, 102, 102, 102, 102},
-                                {32, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 32, 32, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 102, 32, 32, 102, 102},
-                                {102, 102, 32, 32, 102, 102},
-                                {102, 102, 32, 32, 102, 102},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 32},
-                                {102, 102, 102, 102, 32, 32},
-                                {102, 102, 102, 32, 32, 102},
-                                {102, 32, 32, 32, 102, 102},
-                                {102, 32, 32, 32, 32, 102},
-                                {32, 32, 102, 102, 32, 32},
-                                {32, 32, 102, 32, 32, 32},
-                                {32, 32, 32, 32, 32, 32},
-                                {32, 32, 32, 102, 32, 32},
-                                {32, 32, 102, 102, 32, 32},
-                                {102, 32, 32, 32, 32, 102}};
+  unsigned short drawDigitArray[50][3] = {{102, 32, 102},
+                                         {102, 32, 102},
+                                         {102, 32, 102},
+                                         {102, 32, 102},
+                                         {102, 32, 102},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 102},
+                                         {32, 32, 32},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {102, 32, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 102},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 102},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {102, 102, 32},
+                                         {102, 102, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32},
+                                         {102, 102, 32},
+                                         {32, 32, 32},
+                                         {32, 32, 32},
+                                         {32, 102, 32},
+                                         {32, 102, 32},
+                                         {32, 102, 32},
+                                         {32, 32, 32}};
 
   unsigned short *screen = 0xA000U;
   int scr;
@@ -303,15 +288,15 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
   unsigned int forLoopInt;
 
   unsigned char* heartString = "  heart  rate  ";
-  unsigned char* pulseString = "  pulse  rate  ";
-  unsigned char* oxyLevels = " oxygen  level ";
+  unsigned char* pulseString = "     spo2%      ";
+  unsigned char* plethString = "     pleth     ";
 
   unsigned char serialData;
   unsigned char c;
-  unsigned long a, heartRatePixel, pulseRatePixel,oxyLevelPixel;
+  unsigned long a, heartRatePixel, spo2Pixel,plethPixel;
   unsigned long heartRatePixelArray[478];
-  unsigned long pulseRatePixelArray[478];
-  unsigned long oxyLevelPixelArray[478];
+  unsigned long spo2PixelArray[478];
+  unsigned long plethPixelArray[478];
   int n = 0;
 
 void plot_pixel() {
@@ -335,13 +320,13 @@ void plot_pixel() {
   (x1>>3L) *
   (50*64L);
 
-  pulseRatePixel = 0x40000L +
+  spo2Pixel = 0x40000L +
   (x1&7) +
   (pulseYPos*8u) +
   (x1>>3L) *
   (50*64L);
 
-  oxyLevelPixel = 0x40000L +
+  plethPixel = 0x40000L +
   (x1&7) +
   (oxyYPos*8u) +
   (x1>>3L) *
@@ -369,8 +354,8 @@ void plot_pixel() {
 void drawJaggyLines()
 {
   lpoke(heartRatePixelArray[x], 0x00);
-  lpoke(pulseRatePixelArray[x], 0x00);
-  lpoke(oxyLevelPixelArray[x], 0x00);
+  lpoke(spo2PixelArray[x], 0x00);
+  lpoke(plethPixelArray[x], 0x00);
 
   if (heartIterator < 29)
   {
@@ -389,12 +374,12 @@ void drawJaggyLines()
   lineColour = 0x22;
   lpoke(heartRatePixel, lineColour);
   heartRatePixelArray[x] = heartRatePixel;
-  lineColour = 0x55;
-  lpoke(pulseRatePixel, lineColour);
-  pulseRatePixelArray[x] = pulseRatePixel;
   lineColour = 0x33;
-  lpoke(oxyLevelPixel, lineColour);
-  oxyLevelPixelArray[x] = oxyLevelPixel;
+  lpoke(spo2Pixel, lineColour);
+  spo2PixelArray[x] = spo2Pixel;
+  lineColour = 0x33;
+  lpoke(plethPixel, lineColour);
+  plethPixelArray[x] = plethPixel;
 
   //for (forLoopInt = 0; forLoopInt < 10000; forLoopInt += 1);
 }
@@ -421,13 +406,13 @@ void drawHorizontalLines()
 
 unsigned int arrayOffset;
 
-void setFirstNumberOnRight(unsigned int number,
+void drawDigits(unsigned int number,
                            unsigned short offsetX,
                            unsigned short offsetY)
 {
-  for (newX = (30 + offsetX); newX < (36 + offsetX); newX++)
+  for (newX = (30 + offsetX); newX < (33 + offsetX); newX++)
   {
-    for (newY = (0 + offsetY); newY < (7 + offsetY); newY++)
+    for (newY = (0 + offsetY); newY < (5 + offsetY); newY++)
     {
       screen[newX + newY * 45U] = 102;
     }
@@ -438,38 +423,38 @@ void setFirstNumberOnRight(unsigned int number,
       arrayOffset = 0;
       break;
     case 2:
-      arrayOffset = 7;
+      arrayOffset = 5;
       break;
     case 3:
-      arrayOffset = 14;
+      arrayOffset = 10;
       break;
     case 4:
-      arrayOffset = 21;
+      arrayOffset = 15;
       break;
     case 5:
-      arrayOffset = 28;
+      arrayOffset = 20;
       break;
     case 6:
-      arrayOffset = 35;
+      arrayOffset = 25;
       break;
     case 7:
-      arrayOffset = 42;
+      arrayOffset = 30;
       break;
     case 8:
-      arrayOffset = 49;
+      arrayOffset = 35;
       break;
     case 9:
-      arrayOffset = 56;
+      arrayOffset = 40;
       break;
     default:
-      arrayOffset = 63;
+      arrayOffset = 45;
       break;
   }
-  for (newX = 0; newX < 6; newX++)
+  for (newX = 0; newX < 3; newX++)
   {
-    for (newY = 0; newY < 7; newY++)
+    for (newY = 0; newY < 5; newY++)
     {
-      screen[(newX + 30U + offsetX) + ((newY + 1 + offsetY) * 45U)] = nums[newY + arrayOffset][newX];
+      screen[(newX + 30U + offsetX) + ((newY + 1 + offsetY) * 45U)] = drawDigitArray[newY + arrayOffset][newX];
     }
   }
 }
@@ -562,14 +547,14 @@ void main(void) {
 
   for (x = 0; x < 15; x++)
   {
-    screen[x + 30 + 990U] = pulseString[x];
-    lpoke(0xff80000L+((x + 30)*2) + 1980U + 1,5);
+    screen[x + 30 + 990U] = plethString[x];
+    lpoke(0xff80000L+((x + 30)*2) + 1980U + 1,3);
   }
 
   for (x = 0; x < 15; x++)
   {
-    screen[x + 30 + 1530U] = oxyLevels[x];
-    lpoke(0xff80000L+((x + 30)*2) + 3060U + 1,3);
+    screen[x + 30 + 1530U] = pulseString[x];
+    lpoke(0xff80000L+((x + 30)*2) + 3060U + 1,5);
   }
 
   // Clear pixel memory
@@ -592,6 +577,25 @@ void main(void) {
       x = 0;
     }
 
+//    v = PEEK(0xd012);
+      v = PEEK(0xd0e0U);
+
+    if (v > 100)
+    {
+      char1 = v / 100;
+      divisor = 100 * char1;
+    }
+    else
+    {
+      char1 = 0;
+    }
+
+    v = v - divisor;
+    char2 = v / 10;
+    divisor = 10 * char2;
+    v = v - divisor;
+    char3 = v;
+
     n++;
     c = n>>8;
     if (tempCounter == 1000)
@@ -604,14 +608,14 @@ void main(void) {
       {
           drawCounter = 0;
       }
-      setFirstNumberOnRight(drawCounter, 8, 0);
-      setFirstNumberOnRight(drawCounter + 1, 1, 0);
-      setFirstNumberOnRight(drawCounter + 2, 8, 13);
-      setFirstNumberOnRight(drawCounter - 1, 1, 13);
-      setFirstNumberOnRight(drawCounter + 3, 8, 25);
-      setFirstNumberOnRight(drawCounter - 2, 1, 25);
-      setFirstNumberOnRight(drawCounter + 4, 8, 38);
-      setFirstNumberOnRight(drawCounter - 3, 1, 38);
+      drawDigits(char1, 1, 1);
+      drawDigits(char2, 6, 1);
+      drawDigits(char3, 11, 1);
+      drawDigits(drawCounter + 3, 1, 14);
+      drawDigits(drawCounter - 2, 6, 14);
+      drawDigits(drawCounter + 4, 11, 14);
+      drawDigits(drawCounter + 2, 6, 26);
+      drawDigits(drawCounter - 1, 11, 26);
 
 //      y = (v/4) + 124;
 
