@@ -439,6 +439,9 @@ $(TESTDIR)/vicii.prg:       $(TESTDIR)/vicii.c $(TESTDIR)/vicii_asm.s $(CC65)
 $(TESTDIR)/pulseoxy.prg:       $(TESTDIR)/pulseoxy.c $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
+$(TESTDIR)/char16Test.prg:       $(TESTDIR)/char16Test.c $(CC65)
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
+
 $(TESTDIR)/helloworld.prg:       $(TESTDIR)/helloworld.c $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 

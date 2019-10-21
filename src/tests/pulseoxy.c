@@ -152,16 +152,28 @@ void lfill(long destination_address, unsigned char value, unsigned int count)
 
 }
 
-unsigned char offset = 0;
-unsigned char v;
-unsigned char v1;
-unsigned int tempCounter, drawCounter;
+// Holds serial input temporarily
+unsigned char serialInput;
+
+// Delay drawing in the program
+unsigned int drawDelay;
+
+// Dummy variable to iterate through digits
+unsigned int drawCounter;
+
+// Dummy data for heart visuals
 unsigned int heartIterator;
+
+// To efficiently iterate through frames in serial input packets
 unsigned char frame[5];
+
+// Colour of the line being drawn
 unsigned char lineColour;
 
+// Mathematical calculations to split up digits
 unsigned short char1, char2, char3, divisor;
 
+// Dummy data for the heart visuals
 unsigned int heartData[30] = {49,
                              50,
                              53,
@@ -192,8 +204,14 @@ unsigned int heartData[30] = {49,
                              53,
                              52,
                              50};
+
+//
 unsigned char fnum = 0;
+
+//
 unsigned char flast = 99;
+
+// Storing extracted data from packets
 unsigned char spo2;
 unsigned short prh;
 unsigned short pr;
@@ -208,21 +226,21 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
               /*6*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*7*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*8*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
-              /*9*/       { 0x01, 0x80, 0x80, /*SPO2*/0x61, 0xC8 },
-              /*10*/      { 0x01, 0x80, 0x80, /*SPO2/PR*/0x64, 0xC8 },
-              /*11*/      { 0x01, 0x80, 0x80, /*SPO2*/0x61, 0xC8 },
+              /*9*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
+              /*10*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 },
+              /*11*/      { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*12*/      { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*13*/      { 0x01, 0x80, 0x80, 0x61, 0xC8 },
-              /*14*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*15*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*16*/      { 0x01, 0x80, 0x80, /*SPO2*/0x61, 0xC8 },
-              /*17*/      { 0x01, 0x80, 0x80, /*SPO2*/0x61, 0xC8 },
+              /*14*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
+              /*15*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
+              /*16*/      { 0x01, 0x80, 0x80, 0x61, 0xC8 },
+              /*17*/      { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*18*/      { 0x01, 0x80, 0x80, 0x60, 0xC8 },
               /*19*/      { 0x01, 0x80, 0x80, 0x60, 0xC8 },
-              /*20*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*21*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*22*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*23*/      { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
+              /*20*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
+              /*21*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
+              /*22*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
+              /*23*/      { 0x01, 0x80, 0x80, 0x65, 0xC8 },
               /*24*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 },
               /*25*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 }};
 
@@ -332,21 +350,22 @@ void plot_pixel() {
   (x1>>3L) *
   (50*64L);
 
-  /* Assign 2 bytes of memory at address value (of a) before re-assigning to 0. This seems redundant.
-  v = lpeek(a); */
+  /* Assign 2 bytes of memory at address value (of a) before re-assigning to 0.
+  This seems redundant.
+  serialInput = lpeek(a); */
 
-  // Assign v to 0
-  v = 0;
+  // Assign serialInput to 0
+  serialInput = 0;
 
   // Replacement for modulus (runs statement if odd)
   if (!(x&1)) {
-    v &= 0xf0;
-    v |= c;
+    serialInput &= 0xf0;
+    serialInput |= c;
   }
   // Else runs if even
   else {
-    v &= 0xf;
-    v |= (c<<4);
+    serialInput &= 0xf;
+    serialInput |= (c<<4);
   }
 
 }
@@ -368,8 +387,8 @@ void drawJaggyLines()
     heartYPos = heartData[heartIterator];
   }
 
-  v = PEEK(0xd012);
-  pulseYPos = (v/4) +  124;
+  serialInput = PEEK(0xd012);
+  pulseYPos = (serialInput/4) +  124;
 
   lineColour = 0x22;
   lpoke(heartRatePixel, lineColour);
@@ -377,7 +396,7 @@ void drawJaggyLines()
   lineColour = 0x33;
   lpoke(spo2Pixel, lineColour);
   spo2PixelArray[x] = spo2Pixel;
-  lineColour = 0x33;
+  lineColour = 0x55;
   lpoke(plethPixel, lineColour);
   plethPixelArray[x] = plethPixel;
 
@@ -454,13 +473,14 @@ void drawDigits(unsigned int number,
   {
     for (newY = 0; newY < 5; newY++)
     {
-      screen[(newX + 30U + offsetX) + ((newY + 1 + offsetY) * 45U)] = drawDigitArray[newY + arrayOffset][newX];
+      screen[(newX + 30U + offsetX) + ((newY + 1 + offsetY) * 45U)] =
+        drawDigitArray[newY + arrayOffset][newX];
     }
   }
 }
 
 void main(void) {
-  tempCounter = 0;
+  drawDelay = 0;
   drawCounter = 1;
   lineColour = 0x55;
 
@@ -521,8 +541,8 @@ void main(void) {
     for(y=0; y<50; y++)
     {
 //      v = PEEK(0xd0e0U);
-//      v = PEEK(0xd012);
-//      if (v != 0)
+//      serialInput = PEEK(0xd012);
+//      if (serialInput != 0)
 //      {
 //        lineColour = 0x11;
 //      }
@@ -570,19 +590,19 @@ void main(void) {
 
   while (1)
   {
-    tempCounter++;
+    drawDelay++;
 
     x = x + 1;
     if (x > 477) {
       x = 0;
     }
 
-//    v = PEEK(0xd012);
-      v = PEEK(0xd0e0U);
+    serialInput = PEEK(0xd012);
+//      serialInput = PEEK(0xd0e0U);
 
-    if (v > 100)
+    if (serialInput > 100)
     {
-      char1 = v / 100;
+      char1 = serialInput / 100;
       divisor = 100 * char1;
     }
     else
@@ -590,15 +610,15 @@ void main(void) {
       char1 = 0;
     }
 
-    v = v - divisor;
-    char2 = v / 10;
+    serialInput = serialInput - divisor;
+    char2 = serialInput / 10;
     divisor = 10 * char2;
-    v = v - divisor;
-    char3 = v;
+    serialInput = serialInput - divisor;
+    char3 = serialInput;
 
     n++;
     c = n>>8;
-    if (tempCounter == 1000)
+    if (drawDelay == 1000)
     {
       if (drawCounter < 9)
       {
@@ -617,9 +637,9 @@ void main(void) {
       drawDigits(drawCounter + 2, 6, 26);
       drawDigits(drawCounter - 1, 11, 26);
 
-//      y = (v/4) + 124;
+//      y = (serialInput/4) + 124;
 
-      tempCounter = 0;
+      drawDelay = 0;
     }
 
     drawHorizontalLines();
@@ -640,66 +660,94 @@ void main(void) {
       y = 0;
     }
 
-//    v=PEEK(0xd0e0U);
-    v=PEEK(0xd012U);
+//    serialInput=PEEK(0xd0e0U);
+    serialInput=PEEK(0xd012U);
 
     for (x=30; x<45; x++) {
       for(y=0; y<50; y++) {
-        screen[x + y * 45U] = v;
+        screen[x + y * 45U] = serialInput;
         //for (forLoopInt = 0; forLoopInt < 1000; forLoopInt++);
       }
-    //v = needed[x][y];
+    //serialInput = needed[x][y];
   }
 
-    if (v)
+    // If there's input from the serial port
+    if (serialInput)
     {
+
+      // Assign serial input into frames and shuffle each time there's more data
       frame[0] = frame[1];
       frame[1] = frame[2];
       frame[2] = frame[3];
       frame[3] = frame[4];
-      frame[4] = v;
+      frame[4] = serialInput;
 
+      // If a full packet frame is contained in the frame variable
       if (frame[0] == 0x01)
       {
+
+        // Seems as though this should be frame[1] due to serial data checks
 	      if (frame[2]&0x80)
         {
+
+          // If byte 4 (data) is less than 128
 	        if (!(frame[3]&0x80))
           {
+
+            // Set flast to fnum for this frame iteration cycle
             flast = fnum;
 
+            // If SYNC is set to 1 for STATUS (1 in frame 1, and 0 else)
 	          if (frame[1]&1)
             {
+              // First frame iteration in packet
               fnum = 0;
             }
             else
             {
+              // If not the first frame iteration in packet, add to fnum
               fnum++;
             }
 
+            // Switching on current frame in packet
 	          switch (fnum)
             {
+              // If first frame in packet
               case 0:
+                // Pulse rate high (MSB) is defined
                 prh = frame[3];
                 break;
+
+              // If second frame in packet
               case 1:
+                // why is this here? it seems redundant.
 		            if (flast == 0)
                 {
+                  // why get rid of most significant bit in PR LSB?
+                  // To get rid of positive or negative number bit
                   pr = (frame[3]&0x7f); //+((prh&3)<<7);
                 }
 		            break;
+
+              // If third frame in packet
               case 2:
+                // why?
 		            if (flast == 1)
                 {
+                  // Print out pr (with small delay after defining value)
                   //printf("pr = %d\n",pr);
-                  drawHorizontalLines();
                 }
+                // Set spo2 from value in current frame
                 spo2 = frame[3];
 		            break;
+
+              // If fourth frame in packet
 	            case 3:
+                // why?
 		            if (flast == 2)
                 {
+                  // Print out spo2 (with small delay after defining value)
 		              //printf("spo2 = %d\n",spo2);
-
                 }
                 break;
 	          }
@@ -708,12 +756,15 @@ void main(void) {
       }
     }
 
-    if (y % 5 == 0) {
+    // If reached the end of the frame
+    if (!(y%5)) {
 
+      // Move to next frame in packet
       x++;
       y = 0;
 
     }
+    // probably not gonna work properly
     y++;
   }
 }
