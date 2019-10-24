@@ -12,6 +12,7 @@ OPHIS_MON= Ophis/bin/ophis -c
 
 JAVA = java
 KICKASS_JAR = KickAss/KickAss.jar
+KICKC = kickc/bin/kickc.sh
 
 VIVADO=	./vivado_wrapper
 
@@ -440,6 +441,9 @@ $(TESTDIR)/pulseoxy.prg:       $(TESTDIR)/pulseoxy.c $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
 $(TESTDIR)/char16Test.prg:       $(TESTDIR)/char16Test.c $(CC65)
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
+
+$(TOOLDIR)/on_screen_keyboard_gen.prg:       	$(TOOLDIR)/on_screen_keyboard_gen.c $(KICKC)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
 $(TESTDIR)/helloworld.prg:       $(TESTDIR)/helloworld.c $(CC65)

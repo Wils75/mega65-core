@@ -205,22 +205,21 @@ unsigned int heartData[30] = {49,
                              52,
                              50};
 
-//
+// To keep track of frame number in packet
 unsigned char fnum = 0;
 
-//
+// Most likely for testing, will always be 1 less than fnum
 unsigned char flast = 99;
 
-// Storing extracted data from packets
+// Storing extracted health readings from packets
 unsigned char spo2;
 unsigned short prh;
 unsigned short pr;
 
-unsigned long j;
-
+// Test array for serial pulse packets
 unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
               /*2*/       { 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
-              /*3*/       { 0x01, 0x80, 0x80, /*SPO2*/0x61, 0xC8 },
+              /*3*/       { 0x01, 0x80, 0x80, /*SPO2*/0x63, 0xC8 },
               /*4*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*5*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
               /*6*/       { 0x01, 0x80, 0x80, 0x61, 0xC8 },
@@ -244,6 +243,7 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
               /*24*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 },
               /*25*/      { 0x01, 0x80, 0x80, 0x64, 0xC8 }};
 
+  // Array of digits to be drawn on right side of visual readings
   unsigned short drawDigitArray[50][3] = {{102, 32, 102},
                                          {102, 32, 102},
                                          {102, 32, 102},
@@ -295,28 +295,40 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
                                          {32, 102, 32},
                                          {32, 32, 32}};
 
+  // Screen location
   unsigned short *screen = 0xA000U;
-  int scr;
 
+  // Iteration variables declared
   unsigned int x,x1;
   unsigned int y, newX, newY;
+
+  // Maintaining array positions for each reading
   unsigned int heartYPos, pulseYPos, oxyYPos;
-  unsigned int flag;
+
+  // Counter for horizontal lines between readings
   unsigned int horizontalCounter;
-  unsigned int forLoopInt;
 
+  // Labels for pulseoxy readings
   unsigned char* heartString = "  heart  rate  ";
-  unsigned char* pulseString = "     spo2%      ";
   unsigned char* plethString = "     pleth     ";
+  unsigned char* spo2String = "     spo2%      ";
 
-  unsigned char serialData;
+  // Temp variables for bitwise pixel drawing operations
   unsigned char c;
-  unsigned long a, heartRatePixel, spo2Pixel,plethPixel;
+  unsigned long a;
+
+  // Pixel management for each pulseoxy reading
+  unsigned long heartRatePixel, plethPixel,spo2Pixel;
+
+  // Pixel storage for each pulseoxy reading
   unsigned long heartRatePixelArray[478];
-  unsigned long spo2PixelArray[478];
   unsigned long plethPixelArray[478];
+  unsigned long spo2PixelArray[478];
+
+  // Temp variable for screen RAM initialisation
   int n = 0;
 
+// Function for plotting pixels
 void plot_pixel() {
   // Integer halving the number with bitwise shift
   x1 = x>>1;
@@ -332,27 +344,26 @@ void plot_pixel() {
   // Screen dimension multiplication
   (50*64L);
 
+  // Plotting heart rate pixels
   heartRatePixel = 0x40000L +
   (x1&7) +
   (heartYPos*8u) +
   (x1>>3L) *
   (50*64L);
 
-  spo2Pixel = 0x40000L +
+  // Plotting pleth pixels
+  plethPixel = 0x40000L +
   (x1&7) +
   (pulseYPos*8u) +
   (x1>>3L) *
   (50*64L);
 
-  plethPixel = 0x40000L +
+  // Plotting spo2 pixels
+  spo2Pixel = 0x40000L +
   (x1&7) +
   (oxyYPos*8u) +
   (x1>>3L) *
   (50*64L);
-
-  /* Assign 2 bytes of memory at address value (of a) before re-assigning to 0.
-  This seems redundant.
-  serialInput = lpeek(a); */
 
   // Assign serialInput to 0
   serialInput = 0;
@@ -370,12 +381,16 @@ void plot_pixel() {
 
 }
 
-void drawJaggyLines()
+// Function to draw visualised readings
+void drawRateLines()
 {
-  lpoke(heartRatePixelArray[x], 0x00);
-  lpoke(spo2PixelArray[x], 0x00);
-  lpoke(plethPixelArray[x], 0x00);
 
+  // Set current pixels to empty (for each reading)
+  lpoke(heartRatePixelArray[x], 0x00);
+  lpoke(plethPixelArray[x], 0x00);
+  lpoke(spo2PixelArray[x], 0x00);
+
+  // Dummy array plotting for heart rate reading
   if (heartIterator < 29)
   {
     heartYPos = heartData[heartIterator];
@@ -387,30 +402,43 @@ void drawJaggyLines()
     heartYPos = heartData[heartIterator];
   }
 
+  // Reading/interpreting serial input for pulse
   serialInput = PEEK(0xd012);
   pulseYPos = (serialInput/4) +  124;
 
+  // Setting heart rate visuals with chosen colour
   lineColour = 0x22;
   lpoke(heartRatePixel, lineColour);
   heartRatePixelArray[x] = heartRatePixel;
+
+  // Setting pleth visuals with chosen colour
   lineColour = 0x33;
-  lpoke(spo2Pixel, lineColour);
-  spo2PixelArray[x] = spo2Pixel;
-  lineColour = 0x55;
   lpoke(plethPixel, lineColour);
   plethPixelArray[x] = plethPixel;
 
-  //for (forLoopInt = 0; forLoopInt < 10000; forLoopInt += 1);
+  // Setting spo2 visuals with chosen colour
+  lineColour = 0x55;
+  lpoke(spo2Pixel, lineColour);
+  spo2PixelArray[x] = spo2Pixel;
+
 }
 
+// Function to draw horizontal lines between visual readings
 void drawHorizontalLines()
 {
+
+  // Initialise counter of horizontal lines for while loop
   horizontalCounter = 0;
 
+  // While the three horizontal lines haven't been drawn
   while (horizontalCounter < 3)
   {
+
+    // Plot pixels to create yellow lines between readings
     plot_pixel();
     lpoke(a, 0x77);
+
+    // Ensuring that all three lines are drawn
     if (y == 99 || y == 198)
     {
       y += 99;
@@ -419,16 +447,22 @@ void drawHorizontalLines()
     {
       y = 99;
     }
+
+    // Incrementing the counter for the three lines
     horizontalCounter += 1;
+
   }
 }
 
+// Variable to store which digit is being referred to (in digit array)
 unsigned int arrayOffset;
 
+// Function to draw digits
 void drawDigits(unsigned int number,
                            unsigned short offsetX,
                            unsigned short offsetY)
 {
+  // Nested for loops to initialise digit space to checkered pattern
   for (newX = (30 + offsetX); newX < (33 + offsetX); newX++)
   {
     for (newY = (0 + offsetY); newY < (5 + offsetY); newY++)
@@ -436,6 +470,8 @@ void drawDigits(unsigned int number,
       screen[newX + newY * 45U] = 102;
     }
   }
+
+  // Assigns offset in digit array based on number chosen
   switch(number)
   {
     case 1:
@@ -465,10 +501,13 @@ void drawDigits(unsigned int number,
     case 9:
       arrayOffset = 40;
       break;
+    // Default is the number 0
     default:
       arrayOffset = 45;
       break;
   }
+
+  // Draws the selected digit on the screen
   for (newX = 0; newX < 3; newX++)
   {
     for (newY = 0; newY < 5; newY++)
@@ -477,12 +516,15 @@ void drawDigits(unsigned int number,
         drawDigitArray[newY + arrayOffset][newX];
     }
   }
+
 }
 
+// Main of program
 void main(void) {
+
+  // Initialising draw delay and counter
   drawDelay = 0;
   drawCounter = 1;
-  lineColour = 0x55;
 
   // Fast CPU
   POKE(0,65);
@@ -536,6 +578,7 @@ void main(void) {
 
   }
 
+  // Initialising checkered area for digits
   for (x=30; x<45; x++)
   {
     for(y=0; y<50; y++)
@@ -552,6 +595,7 @@ void main(void) {
     }
   }
 
+  // Drawing blank lines between digit segments
   for (x = 30; x < 45; x++)
   {
     screen[x + 540U] = 32;
@@ -559,21 +603,24 @@ void main(void) {
     screen[x + 1665U] = 32;
   }
 
+  // Drawing digit reading label for heart rate
   for (x = 0; x < 15; x++)
   {
     screen[x + 30 + 405U] = heartString[x];
     lpoke(0xff80000L+((x + 30)*2) + 810U + 1,2);
   }
 
+  // Drawing digit reading label for pleth
   for (x = 0; x < 15; x++)
   {
     screen[x + 30 + 990U] = plethString[x];
     lpoke(0xff80000L+((x + 30)*2) + 1980U + 1,3);
   }
 
+  // Drawing digit reading label for spo2
   for (x = 0; x < 15; x++)
   {
-    screen[x + 30 + 1530U] = pulseString[x];
+    screen[x + 30 + 1530U] = spo2String[x];
     lpoke(0xff80000L+((x + 30)*2) + 3060U + 1,5);
   }
 
@@ -581,25 +628,31 @@ void main(void) {
   lfill(0x50000L,0,0xFFFF);
   lfill(0x40000L,0,0xFFFF);
 
+  // Initialising variables for infinite while loop
   x = 0;
   y = 99;
-  heartYPos = 24;
   n = 0;
   heartIterator = 0;
-  flag = 0;
 
+  // Infinite while loop for all moving segments of the screen
   while (1)
   {
+
+    // Increment the draw delay
     drawDelay++;
 
-    x = x + 1;
-    if (x > 477) {
+    // Ensure the visual readings increment but don't reach the digit sections
+    x += 1;
+    if (x > 477)
+    {
       x = 0;
     }
 
+    // Set serial input to video scan line for testing
     serialInput = PEEK(0xd012);
-//      serialInput = PEEK(0xd0e0U);
+    //serialInput = PEEK(0xd0e0U);
 
+    // Segment first character of input for drawing digit
     if (serialInput > 100)
     {
       char1 = serialInput / 100;
@@ -610,16 +663,23 @@ void main(void) {
       char1 = 0;
     }
 
+    // Segment second character of input for drawing digit
     serialInput = serialInput - divisor;
     char2 = serialInput / 10;
     divisor = 10 * char2;
+
+    // Segment third character of input for drawing digit
     serialInput = serialInput - divisor;
     char3 = serialInput;
 
+    // Unknown functionality
     n++;
     c = n>>8;
+
+    // Only begin drawing after draw delay reaches 1000
     if (drawDelay == 1000)
     {
+      // Dummy testing to cycle through numbers from 0 to 9
       if (drawCounter < 9)
       {
         drawCounter++;
@@ -628,45 +688,53 @@ void main(void) {
       {
           drawCounter = 0;
       }
+      // Drawing segmented character digits
       drawDigits(char1, 1, 1);
       drawDigits(char2, 6, 1);
       drawDigits(char3, 11, 1);
+
+      // Shift numbers around to get random digits on screen for dummy testing
       drawDigits(drawCounter + 3, 1, 14);
       drawDigits(drawCounter - 2, 6, 14);
       drawDigits(drawCounter + 4, 11, 14);
       drawDigits(drawCounter + 2, 6, 26);
       drawDigits(drawCounter - 1, 11, 26);
 
-//      y = (serialInput/4) + 124;
-
+      // Set draw delay back to zero to initialise next delay
       drawDelay = 0;
+
     }
 
+    // Call functions to draw horizontal lines and visual rate lines
     drawHorizontalLines();
-    drawJaggyLines();
+    drawRateLines();
+
   }
 
-
+  // Initialise frame index values
   frame[1] = 0x00;
   frame[3] = 0x00;
   frame[4] = 0x00;
 
+  // Infinite while loop for receiving serial heart data
   while (1)
   {
 
+    // May not be needed for iterating through test array
     if (x == 24 && y == 5)
     {
       x = 0;
       y = 0;
     }
 
-//    serialInput=PEEK(0xd0e0U);
+    // Unsure of whether this serial input should be defined this way
     serialInput=PEEK(0xd012U);
+    //serialInput=PEEK(0xd0e0U);
 
+    // Setting screen to serial input
     for (x=30; x<45; x++) {
       for(y=0; y<50; y++) {
         screen[x + y * 45U] = serialInput;
-        //for (forLoopInt = 0; forLoopInt < 1000; forLoopInt++);
       }
     //serialInput = needed[x][y];
   }
