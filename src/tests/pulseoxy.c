@@ -296,7 +296,7 @@ unsigned char needed[25][5] = {{ 0x01, 0x80, 0x80, /*PR*/0x65, 0xC8 },
                                          {32, 32, 32}};
 
   // Screen location
-  unsigned short *screen = 0xA000U;
+  unsigned short *screen = 0xA000;
 
   // Iteration variables declared
   unsigned int x,x1;

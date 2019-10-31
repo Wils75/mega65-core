@@ -1,0 +1,437 @@
+import "c64.kc"
+import "print"
+
+//byte* ZERO = $2000;
+
+void POKE(unsigned short address, unsigned char value)
+{
+  *(unsigned char*)address = value;
+}
+
+unsigned char PEEK(unsigned short address)
+{
+  return *(unsigned char*)address;
+}
+
+//kickasm(resource "invert/000.png", pc ZERO, bytes 6*4*8)
+//{{
+//    .var zeroPic = LoadPicture("invert/000.png", List().add($444444, $808080, $000000, $ffffff))
+//    .for (var y=0; y<6	; y++)
+//        .for (var x=0;x<4; x++)
+//            .for(var cp=0; cp<8; cp++)
+//                .byte zeroPic.getMulticolorByte(x,cp+y*8)
+//}}
+
+unsigned short i;
+
+struct dmagic_dmalist
+{
+  unsigned char option_0b;
+  unsigned char option_80;
+  unsigned char source_mb;
+  unsigned char option_81;
+  unsigned char dest_mb;
+  unsigned char end_of_options;
+
+  // F018B format DMA request
+  unsigned char command;
+  unsigned int count;
+  unsigned int source_addr;
+  unsigned char source_bank;
+  unsigned int dest_addr;
+  unsigned char dest_bank;
+  unsigned char sub_cmd;  // F018B subcmd
+  unsigned int modulo;
+};
+
+struct dmagic_dmalist dmalist;
+unsigned char dma_byte;
+
+void do_dma(void)
+{
+
+  // Now run DMA job (to and from anywhere, and list is in low 1MB)
+  POKE(0xd702, 0);
+  POKE(0xD704, 0x00);
+  POKE(0xd701, ((unsigned char) & dmalist) >> 8);
+  POKE(0xd705, ((unsigned char) & dmalist) & 0xff); // triggers enhanced DMA
+
+}
+
+void lpoke(long address, unsigned char value)
+{
+  dmalist.option_0b=0x0b;
+  dmalist.option_80=0x80;
+  dmalist.source_mb=0;
+  dmalist.option_81=0x81;
+  dmalist.dest_mb=address>>20;
+  dmalist.end_of_options=0x00;
+
+  dma_byte = value;
+  dmalist.command = 0x00; // copy
+  dmalist.sub_cmd = 0;
+  dmalist.modulo = 0;
+  dmalist.count = 1;
+  dmalist.source_addr = (unsigned int)&dma_byte;
+  dmalist.source_bank = 0;
+  dmalist.dest_addr = address&0xffff;
+  dmalist.dest_bank = (address >> 16)&0xf;
+
+  do_dma();
+  return;
+}
+
+unsigned char lpeek(long address)
+{
+  dmalist.option_0b=0x0b;
+  dmalist.option_80=0x80;
+  dmalist.source_mb=address>>20;
+  dmalist.option_81=0x81;
+  dmalist.dest_mb=0;
+  dmalist.end_of_options=0x00;
+
+  dmalist.command = 0x00; // copy
+  dmalist.count = 1;
+  dmalist.source_addr = address&0xffff;
+  dmalist.source_bank = (address >> 16)&0x0f;
+  dmalist.dest_addr = (unsigned int)&dma_byte;
+  dmalist.source_bank = 0;
+  dmalist.dest_addr = address&0xffff;
+  dmalist.dest_bank = (address >> 16)&0x0f;
+  // Make list work on either old or new DMAgic
+  dmalist.sub_cmd = 0;
+  dmalist.modulo = 0;
+
+  do_dma();
+  return dma_byte;
+}
+
+void lcopy(long source_address, long destination_address, unsigned int count)
+{
+  dmalist.option_0b=0x0b;
+  dmalist.option_80=0x80;
+  dmalist.source_mb=source_address>>20;
+  dmalist.option_81=0x81;
+  dmalist.dest_mb=destination_address>>20;
+  dmalist.end_of_options=0x00;
+
+  dmalist.command = 0x00; // copy
+  dmalist.count = count;
+  dmalist.sub_cmd = 0;
+  dmalist.modulo = 0;
+  dmalist.source_addr = source_address&0xffff;
+  dmalist.source_bank = (source_address >> 16)&0x0f;
+  //  if (source_address >= 0xd000 && source_address < 0xe000)
+  //    dmalist.source_bank|=0x80;
+  dmalist.dest_addr = destination_address&0xffff;
+  dmalist.dest_bank = (destination_address >> 16)&0x0f;
+  //  if (destination_address>=0xd000 && destination_address<0xe000)
+  //    dmalist.dest_bank|=0x80;
+
+  do_dma();
+  return;
+}
+
+void lfill(unsigned dword destination_address, unsigned char value, unsigned int count)
+{
+  dmalist.option_0b = 0x0b;
+  dmalist.option_80 = 0x80;
+  dmalist.source_mb = 0;
+  dmalist.option_81 = 0x81;
+  dmalist.dest_mb = (unsigned char) (destination_address >> 20);
+  dmalist.end_of_options = 0x00;
+
+  dmalist.command = 0x03; // fill
+  dmalist.sub_cmd = 0;
+  dmalist.count = count;
+  dmalist.source_addr = value;
+  dmalist.dest_addr = (unsigned int) destination_address&0xffff;
+  dmalist.dest_bank = (unsigned char) (destination_address >> 16)&0x0f;
+  if ((word) destination_address >= 0xd000 && (word) destination_address < 0xe000)
+    dmalist.dest_bank |= 0x80;
+
+  do_dma();
+  return;
+}
+
+// Holds serial input temporarily
+unsigned char serialInput;
+
+// Delay drawing in the program
+unsigned int drawDelay;
+
+// Dummy variable to iterate through digits
+unsigned int drawCounter;
+
+// Dummy data for heart visuals
+unsigned int heartIterator;
+
+// To efficiently iterate through frames in serial input packets
+unsigned char[5] frame;
+
+// Colour of the line being drawn
+unsigned char f;
+
+// Mathematical calculations to split up digits
+unsigned short char1, char2, char3, divisor;
+
+// Dummy data for the heart visuals
+const unsigned int[30] heartData = {49,
+                                    50,
+                                    53,
+                                    58,
+                                    65,
+                                    74,
+                                    65,
+                                    58,
+                                    53,
+                                    50,
+                                    49,
+                                    48,
+                                    45,
+                                    40,
+                                    33,
+                                    24,
+                                    33,
+                                    40,
+                                    45,
+                                    48,
+                                    49,
+                                    50,
+                                    52,
+                                    53,
+                                    57,
+                                    61,
+                                    57,
+                                    53,
+                                    52,
+                                    50};
+
+// To keep track of frame number in packet
+unsigned char fnum = 0;
+
+// Most likely for testing, will always be 1 less than fnum
+unsigned char flast = 99;
+
+// Storing extracted health readings from packets
+unsigned char spo2;
+unsigned short prh;
+unsigned short pr;
+
+// Screen location
+unsigned short *screen = 0xA000;
+
+// Iteration variables declared
+unsigned int x,x1;
+unsigned int y, newX, newY;
+
+// Maintaining array positions for each reading
+unsigned int heartYPos, pulseYPos, oxyYPos;
+
+// Counter for horizontal lines between readings
+unsigned int horizontalCounter;
+
+// Labels for pulseoxy readings
+unsigned char* heartString = "  heart  rate  ";
+unsigned char* plethString = "     pleth     ";
+unsigned char* spo2String = "     spo2%      ";
+
+// Temp variables for bitwise pixel drawing operations
+unsigned char c;
+long a;
+
+// Pixel management for each pulseoxy reading
+long heartRatePixel, plethPixel,spo2Pixel;
+
+// Pixel storage for each pulseoxy reading
+const long[478] heartRatePixelArray;
+const long[478] plethPixelArray;
+const long[478] spo2PixelArray;
+
+// Temp variable for screen RAM initialisation
+word n = 0;
+
+// Function for plotting pixels
+void plot_pixel()
+{
+  // Integer halving the number with bitwise shift
+  x1 = x>>1;
+
+  // Pixel memory address location
+  a = 0x40000 +
+  // Bitwise AND with 7 to keep resulting value below 4 bits
+  (x1&7) +
+  // Multiply y with unsigned int 8 because of character size
+  (y*8) +
+  // Bitwise shift by 3 (long)
+  (x1>>3) *
+  // Screen dimension multiplication
+  (50*64);
+
+  // Plotting heart rate pixels
+  heartRatePixel = 0x40000 +
+  (x1&7) +
+  (heartYPos*8) +
+  (x1>>3) *
+  (50*64);
+
+  // Plotting pleth pixels
+  plethPixel = 0x40000 +
+  (x1&7) +
+  (pulseYPos*8) +
+  (x1>>3) *
+  (50*64);
+
+  // Plotting spo2 pixels
+  spo2Pixel = 0x40000 +
+  (x1&7) +
+  (oxyYPos*8) +
+  (x1>>3) *
+  (50*64);
+
+  // Assign serialInput to 0
+  serialInput = 0;
+
+  // Replacement for modulus (runs statement if odd)
+  if (!(x&1)) {
+    serialInput &= 0xf0;
+    serialInput |= c;
+  }
+  // Else runs if even
+  else {
+    serialInput &= 0xf;
+    serialInput |= (c<<4);
+  }
+}
+
+// Function to draw visualised readings
+void drawRateLines()
+{
+  // Set current pixels to empty (for each reading)
+  lpoke(heartRatePixelArray[x], 0x00);
+  lpoke(plethPixelArray[x], 0x00);
+  lpoke(spo2PixelArray[x], 0x00);
+
+  // Dummy array plotting for heart rate reading
+  if (heartIterator < 29)
+  {
+    heartYPos = heartData[heartIterator];
+    heartIterator += 1;
+  }
+  else
+  {
+    heartIterator = 0;
+    heartYPos = heartData[heartIterator];
+  }
+
+  // Reading/interpreting serial input for pulse
+  serialInput = PEEK(0xd012);
+  pulseYPos = (serialInput/4) +  124;
+
+  // Setting heart rate visuals with chosen colour
+  unsigned char lineColour = 0x22;
+  lpoke(heartRatePixel, lineColour);
+  heartRatePixelArray[x] = heartRatePixel;
+
+  // Setting pleth visuals with chosen colour
+  lineColour = 0x33;
+  lpoke(plethPixel, lineColour);
+  plethPixelArray[x] = plethPixel;
+
+  // Setting spo2 visuals with chosen colour
+  lineColour = 0x55;
+  lpoke(spo2Pixel, lineColour);
+  spo2PixelArray[x] = spo2Pixel;
+}
+
+// Function to draw horizontal lines between visual readings
+void drawHorizontalLines()
+{
+  // Initialise counter of horizontal lines for while loop
+  horizontalCounter = 0;
+
+  // While the three horizontal lines haven't been drawn
+  while (horizontalCounter < 3)
+  {
+    // Plot pixels to create yellow lines between readings
+    plot_pixel();
+    lpoke(a, 0x77);
+
+    // Ensuring that all three lines are drawn
+    if (y == 99 || y == 198)
+    {
+      y += 99;
+    }
+    else
+    {
+      y = 99;
+    }
+
+    // Incrementing the counter for the three lines
+    horizontalCounter += 1;
+  }
+}
+
+void drawDigits(unsigned short number,
+                unsigned short offsetX,
+                unsigned short offsetY)
+{
+  for(newX = (30 + offsetX); newX < (33 + offsetX); ++newX)
+  {
+    for(newY = offsetY; newY < (5 + offsetY); ++newY)
+    {
+      screen[newX + newY * 45] = 102;
+    }
+  }
+
+  newX = 30 + offsetX;
+  newY = (1 + offsetY);
+}
+
+void main(void)
+{
+
+  // Fast CPU
+  POKE(0, 65);
+
+  // Enable access to serial port and other devices
+  POKE(53295, 0x47);
+  POKE(53295, 0x53);
+
+  // Set serial port speed to 9600
+  POKE(0xd0e6, 0x46);
+  POKE(0xd0e7, 0x10);
+
+  // High res in X and Y directions
+  POKE(0xD031, 0x88);
+
+  // Accessing the VIC registers
+  POKE(0xd02f,0x47);
+  POKE(0xd02f,0x53);
+
+  // Move screen to $A000
+  POKE(0xD060,0x00);
+  POKE(0xD061,0xA0);
+
+  // Logical lines are 90 bytes long
+  POKE(0xD058,90);
+  POKE(0xD05E,45);
+
+  // Make screen background black
+  POKE(0xD020,0);
+  POKE(0xD021,0);
+
+  // Clear colour RAM and set correct bits for showing full colour chars
+  lfill(0xff80000, 0x08, 45*50*2);
+
+  word blankChar = 0x0000;
+
+  // Initialise the screen RAM
+  for (int i = 0; i < 4000; ++i)
+  {
+
+    screen[i] = blankChar;
+
+  }
+
+}

@@ -440,8 +440,12 @@ $(TESTDIR)/vicii.prg:       $(TESTDIR)/vicii.c $(TESTDIR)/vicii_asm.s $(CC65)
 $(TESTDIR)/pulseoxy.prg:       $(TESTDIR)/pulseoxy.c $(CC65)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
 
-$(TESTDIR)/char16Test.prg:       $(TESTDIR)/char16Test.c $(CC65)
+$(TESTDIR)/kickCTest.prg:       $(TESTDIR)/kickCTest.c $(KICKC)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
+
+$(TESTDIR)/WaitSpaceKey.prg:       $(TESTDIR)/WaitSpaceKey.c $(CC65)
+	$(CL65) -O -o $*.prg --mapfile $*.map $<
+
 
 $(TOOLDIR)/on_screen_keyboard_gen.prg:       	$(TOOLDIR)/on_screen_keyboard_gen.c $(KICKC)
 	$(CL65) -O -o $*.prg --mapfile $*.map $<
