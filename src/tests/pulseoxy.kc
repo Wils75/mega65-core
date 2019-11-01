@@ -1,0 +1,200 @@
+//import "c64.kc"
+
+// Screen location
+unsigned short *screen = 0xA000;
+unsigned int x, y;
+unsigned int n = 0;
+
+void POKE(unsigned int address, unsigned char value)
+{
+
+  *(unsigned char*) address = value;
+
+}
+
+unsigned char PEEK(unsigned word address)
+{
+
+  return *(unsigned char*) address;
+
+}
+
+struct dMagicDMAList
+{
+
+  unsigned char option_0b;
+  unsigned char option_80;
+  unsigned char source_mb;
+  unsigned char option_81;
+  unsigned char dest_mb;
+  unsigned char end_of_options;
+
+  // F018B format DMA request
+  unsigned char command;
+  unsigned int count;
+  unsigned int source_addr;
+  unsigned char source_bank;
+  unsigned int dest_addr;
+  unsigned char dest_bank;
+  unsigned char sub_cmd;  // F018B subcmd
+  unsigned int modulo;
+
+};
+
+struct dMagicDMAList dmaList;
+unsigned char dmaByte;
+
+void doDMA()
+{
+
+  POKE(0xd702, 0x00);
+  POKE(0xd704, 0x00);
+  POKE(0xd701, (((unsigned char) &dmaList) >> 8));
+  POKE(0xd701, (((unsigned char) &dmaList) & 0xff));
+
+}
+
+void lpoke(unsigned long address, unsigned char value)
+{
+
+  short* shortPointer = (short*) &address;
+  int* intPointer = (int*) &address;
+
+  dmaList.option_0b = 0x0b;         // Unsigned char
+  dmaList.option_80 = 0x80;         // Unsigned char
+  dmaList.source_mb = 0;            // Unsigned char
+  dmaList.option_81 = 0x81;         // Unsigned char
+
+  // Smoosh two nibbles into one byte and assign
+  short short1 = shortPointer[0];
+  short short2 = shortPointer[1];
+  short1 = short1 << 4;
+  short2 = short2 >> 4;
+  short short3 = short1 | short2;
+  dmaList.dest_mb = short3;         // Unsigned char
+
+  dmaByte = value;
+
+  dmaList.command = 0x00;
+  dmaList.sub_cmd = 0;
+  dmaList.modulo = 0;
+  dmaList.count = 1;
+  dmaList.source_addr = (unsigned int) &dmaByte;
+  dmaList.source_bank = 0;
+
+  int int1 = intPointer[1];
+  dmaList.dest_addr = int1;
+
+  short1 = shortPointer[1];
+  short1 = short1 & 0x0f;
+
+  dmaList.dest_bank = short1;
+
+  doDMA();
+
+}
+
+void lfill(const unsigned long address, const unsigned char value, unsigned int count)
+{
+  char* charPointer = (char*) &address;
+  int* intPointer = (int*) &address;
+
+  dmaList.option_0b = 0x0b;         // Unsigned char
+  dmaList.option_80 = 0x80;         // Unsigned char
+  dmaList.source_mb = 0;            // Unsigned char
+  dmaList.option_81 = 0x81;         // Unsigned char
+
+  // Smoosh two nibbles into one byte and assign
+  char short1 = charPointer[0];
+  char short2 = charPointer[1];
+  short1 = short1 << 4;
+  short2 = short2 >> 4;
+  char short3 = short1 | short2;
+  dmaList.dest_mb = short3;         // Unsigned char
+
+  dmaList.end_of_options = 0x00;
+  dmaList.command = 0x03;
+  dmaList.sub_cmd = 0;
+  dmaList.count = count;
+  dmaList.source_addr = value;
+
+  unsigned int int1 = (unsigned int) intPointer[1];
+  dmaList.dest_addr = int1;
+
+  short1 = charPointer[1];
+  short1 = short1 & 0x0f;
+
+  dmaList.dest_bank = short1;
+
+  if (address >= (unsigned long) 0xd000 && address < (unsigned long) 0xe000)
+  {
+
+    dmaList.dest_bank |= 0x80;
+
+  }
+
+  doDMA();
+
+}
+
+void main(void)
+{
+  // Fast CPU
+
+  POKE(0, 65);
+
+  // Enable access to serial port and other devices
+  POKE(53295,0x47);
+  POKE(53295,0x53);
+
+  // High res in X and Y directions
+  POKE(0xD031, 0x88);
+
+  // Set serial port speed to 9600
+  POKE(0xd0e6, 0x46);
+  POKE(0xd0e7, 0x10);
+
+  // Accessing the VIC registers
+  POKE(0xd02f, 0x47);
+  POKE(0xd02f, 0x53);
+
+  // Setting 16 bit character mode
+  // also enable full colour chars for chars >$FF
+  POKE(0xd054, 0x05);
+
+  // Move screen to $A000
+  POKE(0xD060, 0x00);
+  POKE(0xD061, 0xA0);
+
+  // Logical lines are 90 bytes long
+  POKE(0xD058, 90);
+  POKE(0xD05E, 45);
+
+  // Make screen background black
+  POKE(0xD020, 0);
+  POKE(0xD021, 0);
+
+  // Clear colour RAM and set correct bits for showing full colour chars
+  lfill(0x0ff80000, 0x03 , 45*50*2);
+
+  // Initialise the screen RAM
+  n = 0x1000;
+
+  lfill((unsigned long)screen, 0, 30 * 50 * 2);
+
+  for (x = 0; x < 30; ++x)
+  {
+
+    for(y = 0; y < 50; ++y)
+    {
+
+      screen[x + (y * 45)] = n;
+      ++n;
+      n = n & 0x1fff;
+
+    }
+
+  }
+
+  return;
+}

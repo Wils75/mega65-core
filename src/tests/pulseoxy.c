@@ -10,8 +10,8 @@
 #include <fcntl.h>
 #include <serial.h>
 
-#define POKE(a,v) *((uint8_t *)a) = (uint8_t)v
-#define PEEK(a) ((uint8_t)(*((uint8_t *)a)))
+#define POKE(a,v) *((uint8_t*) a) = (uint8_t) v
+#define PEEK(a) ((uint8_t)(*((uint8_t* )a)))
 
 unsigned short i;
 
@@ -43,7 +43,7 @@ void do_dma(void) {
 
   // Now run DMA job (to and from anywhere, and list is in low 1MB)
   POKE(0xd702U,0);
-  POKE(0xD704U,0x00);
+  POKE(0xd704U,0x00);
   POKE(0xd701U,(((unsigned int)&dmalist) >> 8));
   POKE(0xd705U,((unsigned int)&dmalist)&0xff); // triggers enhanced DMA
 
@@ -552,7 +552,7 @@ void main(void) {
   POKE(0xD060,0x00);
   POKE(0xD061,0xA0);
 
-  // Logical lines are 80 bytes long
+  // Logical lines are 90 bytes long
   POKE(0xD058,90);
   POKE(0xD05E,45);
 
@@ -589,7 +589,7 @@ void main(void) {
 //      {
 //        lineColour = 0x11;
 //      }
-      screen[x + y * 45U] = 102;
+      screen[x + y * 45] = 102;
       lpoke(0xff80000L+x*2+y*90U+0,0);
       lpoke(0xff80000L+x*2+y*90U+1,1);
     }
