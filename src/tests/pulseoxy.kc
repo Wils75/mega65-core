@@ -1,18 +1,23 @@
-//import "c64.kc"
+import "c64.kc"
+import "print"
 
 // Screen location
 unsigned short *screen = 0xA000;
 unsigned int x, y;
 unsigned int n = 0;
 
-void POKE(unsigned int address, unsigned char value)
+inline void POKE(const unsigned int address, const unsigned char value)
 {
 
+  print_word_decimal(address);
+  print_ln();
+  print_byte_decimal(value);
+  print_ln();
   *(unsigned char*) address = value;
 
 }
 
-unsigned char PEEK(unsigned word address)
+inline unsigned char PEEK(const unsigned word address)
 {
 
   return *(unsigned char*) address;
@@ -49,16 +54,16 @@ void doDMA()
 
   POKE(0xd702, 0x00);
   POKE(0xd704, 0x00);
-  POKE(0xd701, (((unsigned char) &dmaList) >> 8));
-  POKE(0xd701, (((unsigned char) &dmaList) & 0xff));
+  POKE(0xd701, (unsigned char) (>(unsigned char*) &dmaList));
+  POKE(0xd705, (unsigned char) (<(unsigned char*) &dmaList));
 
 }
 
 void lpoke(unsigned long address, unsigned char value)
 {
 
-  short* shortPointer = (short*) &address;
-  int* intPointer = (int*) &address;
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
 
   dmaList.option_0b = 0x0b;         // Unsigned char
   dmaList.option_80 = 0x80;         // Unsigned char
@@ -66,13 +71,14 @@ void lpoke(unsigned long address, unsigned char value)
   dmaList.option_81 = 0x81;         // Unsigned char
 
   // Smoosh two nibbles into one byte and assign
-  short short1 = shortPointer[0];
-  short short2 = shortPointer[1];
-  short1 = short1 << 4;
-  short2 = short2 >> 4;
-  short short3 = short1 | short2;
-  dmaList.dest_mb = short3;         // Unsigned char
+  unsigned char char1 = charPointer[3];
+  unsigned char char2 = charPointer[2];
+  char1 = char1 << 4;
+  char2 = char2 >> 4;
+  unsigned char char3 = char1 | char2;
+  dmaList.dest_mb = char3;         // Unsigned char
 
+  dmaList.end_of_options = 0x00;
   dmaByte = value;
 
   dmaList.command = 0x00;
@@ -80,24 +86,29 @@ void lpoke(unsigned long address, unsigned char value)
   dmaList.modulo = 0;
   dmaList.count = 1;
   dmaList.source_addr = (unsigned int) &dmaByte;
-  dmaList.source_bank = 0;
 
-  int int1 = intPointer[1];
+  print_word_decimal(*(unsigned int*) dmaList.source_addr);
+  print_ln();
+  
+  dmaList.source_bank = 0;
+  unsigned int int1 = intPointer[0];
+  unsigned int int2 = intPointer[1];
+
   dmaList.dest_addr = int1;
 
-  short1 = shortPointer[1];
-  short1 = short1 & 0x0f;
+  POKE(dmaList.dest_addr, 2);
+  char1 = charPointer[2];
+  char1 = char1 & 0x0f;
+  dmaList.dest_bank = char1;
 
-  dmaList.dest_bank = short1;
-
-  doDMA();
+  //doDMA();
 
 }
 
-void lfill(const unsigned long address, const unsigned char value, unsigned int count)
+void lfill(unsigned long address, unsigned char value, unsigned int count)
 {
-  char* charPointer = (char*) &address;
-  int* intPointer = (int*) &address;
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
 
   dmaList.option_0b = 0x0b;         // Unsigned char
   dmaList.option_80 = 0x80;         // Unsigned char
@@ -105,11 +116,11 @@ void lfill(const unsigned long address, const unsigned char value, unsigned int 
   dmaList.option_81 = 0x81;         // Unsigned char
 
   // Smoosh two nibbles into one byte and assign
-  char short1 = charPointer[0];
-  char short2 = charPointer[1];
+  unsigned char short1 = charPointer[3];
+  unsigned char short2 = charPointer[2];
   short1 = short1 << 4;
   short2 = short2 >> 4;
-  char short3 = short1 | short2;
+  unsigned char short3 = short1 | short2;
   dmaList.dest_mb = short3;         // Unsigned char
 
   dmaList.end_of_options = 0x00;
@@ -118,15 +129,17 @@ void lfill(const unsigned long address, const unsigned char value, unsigned int 
   dmaList.count = count;
   dmaList.source_addr = value;
 
-  unsigned int int1 = (unsigned int) intPointer[1];
+  unsigned int int1 = (unsigned int) intPointer[0];
   dmaList.dest_addr = int1;
 
-  short1 = charPointer[1];
+  short1 = charPointer[2];
   short1 = short1 & 0x0f;
 
   dmaList.dest_bank = short1;
 
-  if (address >= (unsigned long) 0xd000 && address < (unsigned long) 0xe000)
+  short1 = charPointer[1];
+
+  if (short1 >= (unsigned char) 0xd0 && short1 < (unsigned char) 0xe0)
   {
 
     dmaList.dest_bank |= 0x80;
@@ -141,8 +154,8 @@ void main(void)
 {
   // Fast CPU
 
-  POKE(0, 65);
-
+  //POKE(0, 65);
+/*
   // Enable access to serial port and other devices
   POKE(53295,0x47);
   POKE(53295,0x53);
@@ -169,13 +182,17 @@ void main(void)
   // Logical lines are 90 bytes long
   POKE(0xD058, 90);
   POKE(0xD05E, 45);
-
+  */
   // Make screen background black
-  POKE(0xD020, 0);
-  POKE(0xD021, 0);
+  //POKE(0xD020, 0x02);
+  //POKE(0xD021, 0);
 
+  //POKE(0xD020, 0x01);
+  lpoke(0xd020, 0x02);
+/*
   // Clear colour RAM and set correct bits for showing full colour chars
-  lfill(0x0ff80000, 0x03 , 45*50*2);
+  lfill(0x0ff80000, 0x03 , 45 * 50 * 2);
+
 
   // Initialise the screen RAM
   n = 0x1000;
@@ -196,5 +213,22 @@ void main(void)
 
   }
 
+/*
+
+  // Initialising checkered area for digits
+  for (x = 30; x < 45; ++x)
+  {
+
+    for(y=0; y<50; ++y)
+    {
+
+      screen[x + y * 45] = 102;
+      //lpoke(0xff80000 + (x * 2) + (y * 90) + 0, 0);
+      //lpoke(0xff80000 + (x * 2) + (y * 90) + 1, 1);
+
+    }
+
+  }
+*/
   return;
 }
