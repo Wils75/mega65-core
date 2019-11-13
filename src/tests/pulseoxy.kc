@@ -8,25 +8,16 @@ unsigned int n = 0;
 
 inline void POKE(const unsigned int address, const unsigned char value)
 {
-
-  print_word_decimal(address);
-  print_ln();
-  print_byte_decimal(value);
-  print_ln();
   *(unsigned char*) address = value;
-
 }
 
 inline unsigned char PEEK(const unsigned word address)
 {
-
   return *(unsigned char*) address;
-
 }
 
 struct dMagicDMAList
 {
-
   unsigned char option_0b;
   unsigned char option_80;
   unsigned char source_mb;
@@ -43,7 +34,6 @@ struct dMagicDMAList
   unsigned char dest_bank;
   unsigned char sub_cmd;  // F018B subcmd
   unsigned int modulo;
-
 };
 
 struct dMagicDMAList dmaList;
@@ -51,61 +41,48 @@ unsigned char dmaByte;
 
 void doDMA()
 {
-
   POKE(0xd702, 0x00);
   POKE(0xd704, 0x00);
   POKE(0xd701, (unsigned char) (>(unsigned char*) &dmaList));
   POKE(0xd705, (unsigned char) (<(unsigned char*) &dmaList));
-
 }
 
-void lpoke(unsigned long address, unsigned char value)
+inline void lpoke(unsigned long address,
+                  unsigned char value,
+                  unsigned int count)
 {
-
   unsigned char* charPointer = (unsigned char*) &address;
   unsigned int* intPointer = (unsigned int*) &address;
+
+  *(unsigned char *)$0426=<&dmaList;
+  *(unsigned char *)$0427=>&dmaList;
+
+  // Smoosh two nibbles into one byte and assign
+  unsigned char mega_byte = (charPointer[3] << 4) | (charPointer[2] >> 4);
 
   dmaList.option_0b = 0x0b;         // Unsigned char
   dmaList.option_80 = 0x80;         // Unsigned char
   dmaList.source_mb = 0;            // Unsigned char
   dmaList.option_81 = 0x81;         // Unsigned char
-
-  // Smoosh two nibbles into one byte and assign
-  unsigned char char1 = charPointer[3];
-  unsigned char char2 = charPointer[2];
-  char1 = char1 << 4;
-  char2 = char2 >> 4;
-  unsigned char char3 = char1 | char2;
-  dmaList.dest_mb = char3;         // Unsigned char
-
   dmaList.end_of_options = 0x00;
-  dmaByte = value;
 
   dmaList.command = 0x00;
   dmaList.sub_cmd = 0;
   dmaList.modulo = 0;
-  dmaList.count = 1;
-  dmaList.source_addr = (unsigned int) &dmaByte;
-
-  print_word_decimal(*(unsigned int*) dmaList.source_addr);
-  print_ln();
-  
+  dmaList.count = count;
   dmaList.source_bank = 0;
-  unsigned int int1 = intPointer[0];
-  unsigned int int2 = intPointer[1];
 
-  dmaList.dest_addr = int1;
+  dmaList.dest_addr = (intPointer[0]);
+  dmaList.dest_bank = (charPointer[2] & 0x0f);
 
-  POKE(dmaList.dest_addr, 2);
-  char1 = charPointer[2];
-  char1 = char1 & 0x0f;
-  dmaList.dest_bank = char1;
+  dmaList.dest_mb = mega_byte;         // Unsigned char
+  dmaByte = value;
 
-  //doDMA();
-
+  dmaList.source_addr = (unsigned int) &dmaByte;
+  doDMA();
 }
 
-void lfill(unsigned long address, unsigned char value, unsigned int count)
+inline void lfill(unsigned long address, unsigned char value, unsigned int count)
 {
   unsigned char* charPointer = (unsigned char*) &address;
   unsigned int* intPointer = (unsigned int*) &address;
@@ -153,15 +130,14 @@ void lfill(unsigned long address, unsigned char value, unsigned int count)
 void main(void)
 {
   // Fast CPU
+  POKE(0, 65);
 
-  //POKE(0, 65);
-/*
   // Enable access to serial port and other devices
   POKE(53295,0x47);
   POKE(53295,0x53);
 
   // High res in X and Y directions
-  POKE(0xD031, 0x88);
+  POKE(0xd031, 0x88);
 
   // Set serial port speed to 9600
   POKE(0xd0e6, 0x46);
@@ -177,58 +153,46 @@ void main(void)
 
   // Move screen to $A000
   POKE(0xD060, 0x00);
-  POKE(0xD061, 0xA0);
+  POKE(0xD061, 0xa0);
 
   // Logical lines are 90 bytes long
-  POKE(0xD058, 90);
-  POKE(0xD05E, 45);
-  */
+  POKE(0xD058, 0x5a);
+  POKE(0xD05E, 0x2d);
+
   // Make screen background black
-  //POKE(0xD020, 0x02);
-  //POKE(0xD021, 0);
+  POKE(0xD020, 0x00);
+  POKE(0xD021, 0x00);
 
-  //POKE(0xD020, 0x01);
-  lpoke(0xd020, 0x02);
-/*
+//  lpoke(0xffd3020, 0x02);
+
   // Clear colour RAM and set correct bits for showing full colour chars
-  lfill(0x0ff80000, 0x03 , 45 * 50 * 2);
-
+  lfill(0x0ff80000, 0x01, 90 * 50);
 
   // Initialise the screen RAM
   n = 0x1000;
 
-  lfill((unsigned long)screen, 0, 30 * 50 * 2);
+  lfill((unsigned long)screen, 0, 45 * 50 * 2);
 
-  for (x = 0; x < 30; ++x)
+  for(x = 0; x < 1; x++)
   {
-
-    for(y = 0; y < 50; ++y)
+    for(y = 0; y < 50; y++)
     {
-
-      screen[x + (y * 45)] = n;
-      ++n;
-      n = n & 0x1fff;
-
+      lpoke(0x0ffd3021, 0x0c, 1);
     }
-
   }
 
-/*
+  unsigned char ch = 1;
 
-  // Initialising checkered area for digits
-  for (x = 30; x < 45; ++x)
+  while(1)
   {
-
-    for(y=0; y<50; ++y)
+    POKE(53280, ch);
+    if(ch < 7)
     {
-
-      screen[x + y * 45] = 102;
-      //lpoke(0xff80000 + (x * 2) + (y * 90) + 0, 0);
-      //lpoke(0xff80000 + (x * 2) + (y * 90) + 1, 1);
-
+      ch++;
     }
-
+    else
+    {
+      ch = 1;
+    }
   }
-*/
-  return;
 }
