@@ -1,75 +1,106 @@
 import "c64.kc"
 import "print"
 
-byte* SCREEN = 0xa000;
-byte* button = 0x2000;
-byte* COLOUR = 0xd800;
-
 inline void POKE(const unsigned int address, const unsigned char value)
 {
   *(unsigned char*) address = value;
 }
 
-kickasm(resource "button01.png", pc button, bytes (5 * 5 * 8))
-{{
-	.var picButton = LoadPicture("button01.png",
-															 List().add($000000, $ffffff, $444444, $808080))
-	.for(var y = 0; y < 5; y++)
-    .for(var x = 0; x < 5; x++)
-		  .for(var cp = 0; cp < 8; cp++)
-			  .byte picButton.getMulticolorByte(x, cp + y * 8)
-}}
+struct dMagicDMAList
+{
+  unsigned char option_0b;
+  unsigned char option_80;
+  unsigned char source_mb;
+  unsigned char option_81;
+  unsigned char dest_mb;
+  unsigned char end_of_options;
+
+  // F018B format DMA request
+  unsigned char command;
+  unsigned int count;
+  unsigned int source_addr;
+  unsigned char source_bank;
+  unsigned int dest_addr;
+  unsigned char dest_bank;
+  unsigned char sub_cmd;  // F018B subcmd
+  unsigned int modulo;
+};
+
+struct dMagicDMAList[1] dmaList;
+unsigned char dmaByte;
+
+void doDMA(void)
+{
+  POKE(0xd702, 0x00);
+  POKE(0xd704, 0x00);
+  POKE(0xd701, (unsigned char) (>(unsigned char*) dmaList));
+  POKE(0xd705, (unsigned char) (<(unsigned char*) dmaList));
+}
+
+inline void lpoke(unsigned long address, unsigned char value)
+{
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
+
+  *(unsigned char *)$0426=<dmaList;
+  *(unsigned char *)$0427=>dmaList;
+
+  // Smoosh two nibbles into one byte and assign
+  unsigned char mega_byte = (charPointer[3] << 4) | (charPointer[2] >> 4);
+
+  dmaList[0].option_0b = 0x0b; // Unsigned char
+  dmaList[0].option_80 = 0x80; // Unsigned char
+  dmaList[0].source_mb = 0; // Unsigned char
+  dmaList[0].option_81 = 0x81; // Unsigned char
+  dmaList[0].end_of_options = 0x00;
+
+  dmaList[0].command = 0x00;
+  dmaList[0].sub_cmd = 0;
+  dmaList[0].modulo = 0;
+  dmaList[0].count = 1;
+  dmaList[0].source_bank = 0;
+
+  dmaList[0].dest_addr = (intPointer[0]);
+  dmaList[0].dest_bank = (charPointer[2] & 0x0f);
+
+  dmaList[0].dest_mb = mega_byte; // Unsigned char
+  dmaByte = value;
+
+  dmaList[0].source_addr = (unsigned int) &dmaByte;
+  doDMA();
+}
 
 void main(void)
 {
-	// Fast CPU.
-	POKE(0x0000, 0x41);
+  // Fast CPU
+  POKE(0x0000, 0x41);
 
-	// Enable access to serial port and other devices.
-	POKE(0xd02f, 0x47);
-	POKE(0xd02f, 0x53);
+  // Enable access to serial port and other devices
+  POKE(0xd02f,0x47);
+  POKE(0xd02f,0x53);
 
-	// High resolution in X and Y directions.
-	POKE(0xd031, 0x88);
-	
-	// Move screen to 0xa000.
-	POKE(0xd060, 0x00);
-	POKE(0xd061, 0xa0);
-	
-	*BORDERCOL = BLACK;
-	*BGCOL = *BGCOL2 = DARK_GREY;
-	*BGCOL3 = BLACK;
-	*D016 = VIC_MCM | VIC_CSEL;
-	
-	//memset(SCREEN, BLACK, 40 * 25);
-	memset(COLS, WHITE | 8 , 40 * 25);
+  unsigned int screen = 0x0400;
 
-	unsigned byte n = 0xff;
-	unsigned int x, y;
+  for(int i = 0; i < 1000; i++)
+  {
+    lpoke(screen, 102);
+    screen++;
+  }
 
-	for(x = 0; x < 45; x++)
-	{
-		for(y = 0; y < 50; y++)
-		{
-			SCREEN[x + (y * 45)] = n;
-			COLOUR[x + (y * 45)] = 0x00; 
-		}
-	}
-	
-	byte ch = 0;
-	
-	*D018 = toD018(SCREEN, button);
+  unsigned char ch = 0;
 
-	for(byte y: 0..4)
-	{
-		for(byte x: 0..4)
-		{
-			SCREEN[x + (y * 40)] = ch;
-			ch++;
-			}
-	}
-	
-	while(1)
-	{
-	}
+  while(1)
+  {
+    if(ch < 2)
+    {
+      ch++;
+      POKE(53280, ch);
+    }
+    else
+    {
+        ch = 0;
+        POKE(53280, ch);
+    }
+  }
+
 }

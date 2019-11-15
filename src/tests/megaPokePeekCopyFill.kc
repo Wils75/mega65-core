@@ -1,0 +1,146 @@
+// Places the unsigned char 'value' into the unsigned integer address 'address'
+inline void POKE(const unsigned int address, const unsigned char value)
+{
+  *(unsigned char*) address = value;
+}
+
+inline unsigned char PEEK(const unsigned word address)
+{
+  return *(unsigned char*) address;
+}
+
+struct dMagicDMAList
+{
+  unsigned char option_0b;
+  unsigned char option_80;
+  unsigned char source_mb;
+  unsigned char option_81;
+  unsigned char dest_mb;
+  unsigned char end_of_options;
+
+  // F018B format DMA request
+  unsigned char command;
+  unsigned int count;
+  unsigned int source_addr;
+  unsigned char source_bank;
+  unsigned int dest_addr;
+  unsigned char dest_bank;
+  unsigned char sub_cmd;  // F018B subcmd
+  unsigned int modulo;
+};
+
+struct dMagicDMAList[1] dmaList;
+unsigned char dmaByte;
+
+// Takes the values entered into struct dMagicDMA dmaList and actions them
+void doDMA()
+{
+  POKE(0xd702, 0x00);
+  POKE(0xd704, 0x00);
+  POKE(0xd701, (unsigned char) (> (unsigned char*) &dmaList[0]));
+  POKE(0xd705, (unsigned char) (< (unsigned char*) &dmaList[0]));
+}
+
+void lpoke(unsigned long address, unsigned char value)
+{
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
+
+  dmaList[0].option_0b = 0x0b;         // Unsigned char
+  dmaList[0].option_80 = 0x80;         // Unsigned char
+  dmaList[0].source_mb = 0;            // Unsigned char
+  dmaList[0].option_81 = 0x81;         // Unsigned char
+  dmaList[0].dest_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
+  dmaList[0].end_of_options = 0x00;
+
+  dmaByte = value;
+  dmaList[0].command = 0x00;
+  dmaList[0].sub_cmd = 0;
+  dmaList[0].modulo = 0;
+  dmaList[0].count = 1;
+  dmaList[0].source_addr = (unsigned int) &dmaByte;
+  dmaList[0].source_bank = 0;
+  dmaList[0].dest_addr = intPointer[0];
+  dmaList[0].dest_bank = (charPointer[2] & 0x0f);
+
+  doDMA();
+}
+
+unsigned char lpeek(unsigned long address)
+{
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
+
+  dmaList[0].option_0b = 0x0b;         // Unsigned char
+  dmaList[0].option_80 = 0x80;         // Unsigned char
+  dmaList[0].source_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
+  dmaList[0].option_81 = 0x81;         // Unsigned char
+  dmaList[0].dest_mb = 0;
+  dmaList[0].end_of_options = 0x00;
+
+  dmaList[0].command = 0x00;
+  dmaList[0].count = 1;
+  dmaList[0].source_addr = intPointer[0];
+  dmaList[0].source_bank = (charPointer[2] & 0x0f);
+  dmaList[0].dest_addr = (unsigned int) &dmaByte;
+  //dmaList[0].source_bank = 0;
+  //dmaList[0].dest_addr = intPointer[0];
+  dmaList[0].dest_bank = 0;
+  dmaList[0].sub_cmd = 0;
+  dmaList[0].modulo = 0;
+
+  doDMA();
+  return dmaByte;
+}
+
+void lfill(unsigned long address,
+                  unsigned char value,
+                  unsigned int count)
+{
+  unsigned char* charPointer = (unsigned char*) &address;
+  unsigned int* intPointer = (unsigned int*) &address;
+
+  dmaList[0].option_0b = 0x0b;         // Unsigned char
+  dmaList[0].option_80 = 0x80;         // Unsigned char
+  dmaList[0].source_mb = 0;            // Unsigned char
+  dmaList[0].option_81 = 0x81;         // Unsigned char
+  dmaList[0].dest_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
+  dmaList[0].end_of_options = 0x00;
+
+  dmaList[0].command = 0x03;
+  dmaList[0].sub_cmd = 0;
+  dmaList[0].count = count;
+  dmaList[0].source_addr = value;
+  dmaList[0].dest_addr = intPointer[0];
+  dmaList[0].dest_bank = (charPointer[2] & 0x0f);
+
+  doDMA();
+}
+
+void lcopy(unsigned long SourceAddress,
+                  unsigned long DestinationAddress,
+                  unsigned int count)
+{
+  unsigned char* sourceChar = (unsigned char*) &SourceAddress;
+  unsigned int* sourceInt = (unsigned int*) &SourceAddress;
+  unsigned char* destChar = (unsigned char*) &DestinationAddress;
+  unsigned int* destInt = (unsigned int*) &DestinationAddress;
+
+  dmaList[0].option_0b = 0x0b;         // Unsigned char
+  dmaList[0].option_80 = 0x80;         // Unsigned char
+  dmaList[0].source_mb = (sourceChar[3] << 4 | sourceChar[2] >> 4);
+  dmaList[0].option_81 = 0x81;         // Unsigned char
+  dmaList[0].dest_mb = (destChar[3] << 4 | destChar[2] >> 4);
+  dmaList[0].end_of_options = 0x00;
+
+  dmaList[0].command = 0x00;
+  dmaList[0].count = count;
+  dmaList[0].sub_cmd = 0;
+  dmaList[0].modulo = 0;
+  dmaList[0].source_addr = sourceInt[0];
+  dmaList[0].source_bank = (sourceChar[2] & 0x0f);
+  dmaList[0].dest_addr = destInt[0];
+  dmaList[0].dest_bank = (destChar[2] & 0x0f);
+
+  doDMA();
+}

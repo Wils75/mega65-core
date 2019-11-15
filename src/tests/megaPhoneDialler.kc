@@ -1,0 +1,88 @@
+import "c64.kc"
+import "print"
+
+import "megaPhoneImageImporter"
+import "megaPokePeekCopyFill"
+
+// Defines a custom location at which to point the display
+unsigned short *screen = 0xa000;
+unsigned int x, y, n;
+
+void main(void)
+{
+  // Fast CPU
+  POKE(0, 65);
+
+  // Enable access to serial port and other devices
+  POKE(53295,0x47);
+  POKE(53295,0x53);
+
+  // High res in X and Y directions
+  POKE(0xd031, 0x88);
+
+  // Set serial port speed to 9600
+  POKE(0xd0e6, 0x46);
+  POKE(0xd0e7, 0x10);
+
+  // Accessing the VIC registers
+  POKE(0xd02f, 0x47);
+  POKE(0xd02f, 0x53);
+
+  // Setting 16 bit character mode
+  // also enable full colour chars for chars >$FF
+  POKE(0xd054, 0x05);
+
+  // Move screen to $A000
+  POKE(0xD060, 0x00);
+  POKE(0xD061, 0xa0);
+
+  // Logical lines are 90 bytes long
+  POKE(0xD058, 0x5a);
+  POKE(0xD05E, 0x2d);
+
+  // Make screen background black
+  POKE(0xD020, 0x00);
+  POKE(0xD021, 0x00);
+
+  // Clear colour RAM and set correct bits for showing full colour chars
+  lfill(0x0ff80000, 0x00, 4500);
+
+  // Initialise the screen RAM
+  n = 0x1000;
+
+  for(x = 0; x < 45; x++)
+  {
+		for(y = 0; y < 50; y++)
+		{
+			screen[x + (y * 45)] = n;
+			n++;
+			n &= 0x1fff;
+		}
+  }
+
+  unsigned short currAddr = 0x4000;
+  x = 0;
+  y = 0;
+
+  for(y = 0; y < 10; y++)
+  {
+    for( x = 0; x < 10; x++)
+    {
+      *(screen + x + (y * 45)) = currAddr >> 6;
+      currAddr += 0x40;
+    }
+  }
+
+//  unsigned char *foo = 0x5900;
+//  for (x = 0 ; x< $300 ; x++) {
+//    foo[x]=((foo[x]&0xf)<<4)+(foo[x]>>4);
+//  }
+
+  lcopy(0x00005900,0x0ffd3100,0x300);
+
+	while(1)
+	{
+		//		(*(scr + 999))++;
+		//		kickasm{{inc $d020}}
+	}
+}
