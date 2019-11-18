@@ -1,24 +1,59 @@
 byte* TEST256 = $4000;
 
-kickasm(resource "test01.png", pc TEST256, bytes 7168)
+kickasm(resource "test03.png", pc TEST256, bytes 7168)
 {{
+
+.var palList = List(256)
+
 // Creates a palette for a picture.
 // The palette is a hashtable mapping color RGB in hexadeciaml RRGGBB format to the index of the color.
 // The size of the palette is the number of different RGB-colors present in the picture
 // Parameters
 // - picture: a picture loaded using LoadPicture()
-.function getPalette(picture) {
+.function getPalette(picture)
+{
 	.var palette = Hashtable()
 	.var colIdx = 0;
-	.for (var x=0; x<picture.width; x++) {
-		.for (var y=0; y<picture.height; y++) {
+
+	.eval palette.put(toHexString(0, 6), colIdx++)
+	.eval palette.put(toHexString(16777215, 6), colIdx++)
+	.eval palette.put(toHexString(8921088, 6), colIdx++)
+	.eval palette.put(toHexString(6869160, 6), colIdx++)
+	.eval palette.put(toHexString(11024544, 6), colIdx++)
+	.eval palette.put(toHexString(5290008, 6), colIdx++)
+	.eval palette.put(toHexString(1577104, 6), colIdx++)
+	.eval palette.put(toHexString(15788120, 6), colIdx++)
+	.eval palette.put(toHexString(10504192, 6), colIdx++)
+	.eval palette.put(toHexString(4664091, 6), colIdx++)
+	.eval palette.put(toHexString(13138032, 6), colIdx++)
+	.eval palette.put(toHexString(4737096, 6), colIdx++)
+	.eval palette.put(toHexString(8421504, 6), colIdx++)
+	.eval palette.put(toHexString(10026904, 6), colIdx++)
+	.eval palette.put(toHexString(5279952, 6), colIdx++)
+	.eval palette.put(toHexString(12105912, 6), colIdx++)
+
+	.for (var x=0; x<picture.width; x++)
+	{
+		.for (var y=0; y<picture.height; y++)
+		{
 			.var col = toHexString(picture.getPixel(x,y),6)
-			.if(palette.get(col)==null) {
-        .print "Colour #" + col + " is palette entry " + colIdx
+			.if(palette.get(col)==null)
+			{
         .eval palette.put(col,colIdx++)
       }
 		}
 	}
+
+	.for(var pIterator = 0;
+		pIterator < palette.keys().size();
+		pIterator++)
+	{
+		.var tempIndex = palette.get(palette.keys().get(pIterator))
+		.var tempColour = palette.keys().get(pIterator)
+		.eval palette.put(tempColour, tempIndex)
+		.eval palList.set(tempIndex, tempColour)
+	}
+
 	.return palette
 }
 
@@ -30,8 +65,8 @@ kickasm(resource "test01.png", pc TEST256, bytes 7168)
 .function getPaletteRgb(palette, idx) {
 	.if(idx>=palette.keys().size())
 		.return 0
-	.var colHex = palette.keys().get(idx)
-  .print "Extracting palette index " + idx + " RGB as #" +colHex;
+//	.var colHex = palette.keys().get(idx)
+	.var colHex = palList.get(idx)
 	.return colHex.asNumber(16)
 }
 
@@ -75,24 +110,19 @@ kickasm(resource "test01.png", pc TEST256, bytes 7168)
 // - y: the y-coordinate of the pixel
 // - palette: a palette for the picture typically created using getPalette(picture)
 .function getFullcolourByte(picture, palette, x, y) {
-	.return getPaletteColour(picture, palette, x, y) & $ff
+ 	.return getPaletteColour(picture, palette, x, y) & $ff
 }
 
 {
-.var test256 = LoadPicture("test01.png")
+.var test256 = LoadPicture("test03.png")
 .var palette256 = getPalette(test256)
+
 .for (var y1 = 0; y1 < test256.height; y1 += 8)
   .for (var x1 = 0; x1 < test256.width; x1 += 8)
     .for (var y2 = 0; y2 < 8; y2++)
       .for (var x2 = 0; x2 < 8; x2++) {
-		    .var ignored = getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
+		    .byte getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
 }
-
-        .for (var y1 = 0; y1 < test256.height; y1 += 8)
-          .for (var x1 = 0; x1 < test256.width; x1 += 8)
-            .for (var y2 = 0; y2 < 8; y2++)
-              .for (var x2 = 0; x2 < 8; x2++)
-        		    .byte getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
 
 * = $5900 "PALETTE256"
 PALETTE256:
