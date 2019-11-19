@@ -1,6 +1,6 @@
 byte* TEST256 = $4000;
 
-kickasm(resource "test03.png", pc TEST256, bytes 7168)
+kickasm(resource "arkaroola.png", pc TEST256, bytes 10368)
 {{
 
 .var palList = List(256)
@@ -114,7 +114,7 @@ kickasm(resource "test03.png", pc TEST256, bytes 7168)
 }
 
 {
-.var test256 = LoadPicture("test03.png")
+.var test256 = LoadPicture("arkaroola.png")
 .var palette256 = getPalette(test256)
 
 .for (var y1 = 0; y1 < test256.height; y1 += 8)
@@ -124,7 +124,7 @@ kickasm(resource "test03.png", pc TEST256, bytes 7168)
 		    .byte getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
 }
 
-* = $5900 "PALETTE256"
+* = $6580 "PALETTE256"
 PALETTE256:
 .for(var i = 0; i < 256; i++) .byte getPaletteRed(palette256, i)
 .for(var i = 0; i < 256; i++) .byte getPaletteGreen(palette256, i)
