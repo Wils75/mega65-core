@@ -1,7 +1,6 @@
 byte* TEST256 = $4000;
 
-
-kickasm(resource "gfxTest.png", pc TEST256)
+kickasm(resource "dalekCloister.png", pc TEST256, bytes 10368)
 {{
 
 .var palList = List(256)
@@ -118,7 +117,7 @@ kickasm(resource "gfxTest.png", pc TEST256)
 }
 
 {
-	.var test256 = LoadPicture("gfxTest.png")
+	.var test256 = LoadPicture("dalekCloister.png")
 	.var palette256 = getPalette(test256)
 	.var pixIdx = 0
 	.var valIdx
@@ -156,12 +155,9 @@ kickasm(resource "gfxTest.png", pc TEST256)
 		}
 	}
 
-// pictureListTable is a hashtable that contains <index number>:<64 pixel values>
-// pictureList is a list of tiles from which to build the image
-
-	TILES:
 	.for(var i = 0; i < pictureList.size(); i++)
 	{
+		.print "pictureList(" + i + "): " + pictureList.get(i)
 		.var tempList = pixelListTable.get(pictureList.get(i))
 		.for(var j = 0; j < 64; j++)
 		{
@@ -169,13 +165,8 @@ kickasm(resource "gfxTest.png", pc TEST256)
 		}
 	}
 
-	SCREENARRAY:
-	.for(var i = 0; i < pictureList.size(); i++)
-	{
-		.print "SCREENARRAY(" + i + ") = " + pictureList.get(i)
-		.byte pictureList.get(i)
-	}
 
+* = $6580 "PALETTE256"
 PALETTE256:
 .for(var i = 0; i < 256; i++) .byte getPaletteRed(palette256, i)
 .for(var i = 0; i < 256; i++) .byte getPaletteGreen(palette256, i)
