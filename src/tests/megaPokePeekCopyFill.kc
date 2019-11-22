@@ -43,8 +43,6 @@ void doDMA()
 
 void lpoke(unsigned long address, unsigned char value)
 {
-  // These char and int pointers are required to deal with long (32-bit)
-  // numbers, as KickC and the MEGA65 processor don't natively deal with them.
   unsigned char* charPointer = (unsigned char*) &address;
   unsigned int* intPointer = (unsigned int*) &address;
 
@@ -52,9 +50,6 @@ void lpoke(unsigned long address, unsigned char value)
   dmaList[0].option_80 = 0x80;         // Unsigned char
   dmaList[0].source_mb = 0;            // Unsigned char
   dmaList[0].option_81 = 0x81;         // Unsigned char
-
-  // Move nibbles from 32-bit long to correct position of 8-bit char.
-  // For example, 11011011 10010110 10100101 00011000 becomes 10111001.
   dmaList[0].dest_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
   dmaList[0].end_of_options = 0x00;
 
@@ -73,16 +68,11 @@ void lpoke(unsigned long address, unsigned char value)
 
 unsigned char lpeek(unsigned long address)
 {
-  // These char and int pointers are required to deal with long (32-bit)
-  // numbers, as KickC and the MEGA65 processor don't natively deal with them.
   unsigned char* charPointer = (unsigned char*) &address;
   unsigned int* intPointer = (unsigned int*) &address;
 
   dmaList[0].option_0b = 0x0b;         // Unsigned char
   dmaList[0].option_80 = 0x80;         // Unsigned char
-
-  // Move nibbles from 32-bit long to correct position of 8-bit char.
-  // For example, 11011011 10010110 10100101 00011000 becomes 10111001.
   dmaList[0].source_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
   dmaList[0].option_81 = 0x81;         // Unsigned char
   dmaList[0].dest_mb = 0;
@@ -93,6 +83,8 @@ unsigned char lpeek(unsigned long address)
   dmaList[0].source_addr = intPointer[0];
   dmaList[0].source_bank = (charPointer[2] & 0x0f);
   dmaList[0].dest_addr = (unsigned int) &dmaByte;
+  //dmaList[0].source_bank = 0;
+  //dmaList[0].dest_addr = intPointer[0];
   dmaList[0].dest_bank = 0;
   dmaList[0].sub_cmd = 0;
   dmaList[0].modulo = 0;
@@ -105,8 +97,6 @@ void lfill(unsigned long address,
                   unsigned char value,
                   unsigned int count)
 {
-  // These char and int pointers are required to deal with long (32-bit)
-  // numbers, as KickC and the MEGA65 processor don't natively deal with them.
   unsigned char* charPointer = (unsigned char*) &address;
   unsigned int* intPointer = (unsigned int*) &address;
 
@@ -114,9 +104,6 @@ void lfill(unsigned long address,
   dmaList[0].option_80 = 0x80;         // Unsigned char
   dmaList[0].source_mb = 0;            // Unsigned char
   dmaList[0].option_81 = 0x81;         // Unsigned char
-  
-  // Move nibbles from 32-bit long to correct position of 8-bit char.
-  // For example, 11011011 10010110 10100101 00011000 becomes 10111001.
   dmaList[0].dest_mb = ((charPointer[3] << 4) | (charPointer[2] >> 4));
   dmaList[0].end_of_options = 0x00;
 
@@ -134,8 +121,6 @@ void lcopy(unsigned long SourceAddress,
                   unsigned long DestinationAddress,
                   unsigned int count)
 {
-  // These char and int pointers are required to deal with long (32-bit)
-  // numbers, as KickC and the MEGA65 processor don't natively deal with them.
   unsigned char* sourceChar = (unsigned char*) &SourceAddress;
   unsigned int* sourceInt = (unsigned int*) &SourceAddress;
   unsigned char* destChar = (unsigned char*) &DestinationAddress;
@@ -143,12 +128,8 @@ void lcopy(unsigned long SourceAddress,
 
   dmaList[0].option_0b = 0x0b;         // Unsigned char
   dmaList[0].option_80 = 0x80;         // Unsigned char
-  // Move nibbles from 32-bit long to correct position of 8-bit char.
-  // For example, 11011011 10010110 10100101 00011000 becomes 10111001.
   dmaList[0].source_mb = (sourceChar[3] << 4 | sourceChar[2] >> 4);
   dmaList[0].option_81 = 0x81;         // Unsigned char
-  // Move nibbles from 32-bit long to correct position of 8-bit char.
-  // For example, 11011011 10010110 10100101 00011000 becomes 10111001.
   dmaList[0].dest_mb = (destChar[3] << 4 | destChar[2] >> 4);
   dmaList[0].end_of_options = 0x00;
 

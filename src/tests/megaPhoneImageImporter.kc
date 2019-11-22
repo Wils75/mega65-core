@@ -1,12 +1,9 @@
 byte* TEST256 = $4000;
 
-kickasm(resource "dalekCloister.png", pc TEST256, bytes 10368)
+kickasm(resource "arkaroola.png", pc TEST256, bytes 10368)
 {{
 
 .var palList = List(256)
-.var pictureList = List()
-.var pixelTable = Hashtable()
-.var pixelListTable = Hashtable()
 
 // Creates a palette for a picture.
 // The palette is a hashtable mapping color RGB in hexadeciaml RRGGBB format to the index of the color.
@@ -117,54 +114,15 @@ kickasm(resource "dalekCloister.png", pc TEST256, bytes 10368)
 }
 
 {
-	.var test256 = LoadPicture("dalekCloister.png")
-	.var palette256 = getPalette(test256)
-	.var pixIdx = 0
-	.var valIdx
+.var test256 = LoadPicture("arkaroola.png")
+.var palette256 = getPalette(test256)
 
-	.for (var y1 = 0; y1 < test256.height; y1 += 8)
-	{
-	  .for (var x1 = 0; x1 < test256.width; x1 += 8)
-	  {
-			.var tempString = ""
-			.var tempValueList = List(64)
-			.eval valIdx = 0
-			.for (var y2 = 0; y2 < 8; y2++)
-				{
-					.for (var x2 = 0; x2 < 8; x2++)
-					{
-						.eval tempString = tempString + toHexString(getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2)), 2)
-						.eval tempValueList.set(valIdx, getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2)))
-						.eval valIdx++
-//						.byte getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
-					}
-				}
-
-			.if(pixelTable.get(tempString) != null)
-			{
-				.eval pictureList.add(pixelTable.get(tempString))
-			}
-
-			.if(pixelTable.get(tempString) == null)
-			{
-				.eval pixelTable.put(tempString, pixIdx)
-				.eval pixelListTable.put(pixIdx, tempValueList)
-				.eval pictureList.add(pixIdx)
-				.eval pixIdx++
-			}
-		}
-	}
-
-	.for(var i = 0; i < pictureList.size(); i++)
-	{
-		.print "pictureList(" + i + "): " + pictureList.get(i)
-		.var tempList = pixelListTable.get(pictureList.get(i))
-		.for(var j = 0; j < 64; j++)
-		{
-			.byte tempList.get(j)
-		}
-	}
-
+.for (var y1 = 0; y1 < test256.height; y1 += 8)
+  .for (var x1 = 0; x1 < test256.width; x1 += 8)
+    .for (var y2 = 0; y2 < 8; y2++)
+      .for (var x2 = 0; x2 < 8; x2++) {
+		    .byte getFullcolourByte(test256, palette256, (x1 + x2), (y1 + y2))
+}
 
 * = $6580 "PALETTE256"
 PALETTE256:
