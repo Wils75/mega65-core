@@ -210,6 +210,26 @@ unsigned char nyblswap(unsigned char in)
   return ((in&0xf)<<4)+((in&0xf0)>>4);
 }
 
+void setup_c64_palette(void)
+{
+  palette[0]=(struct rgb){.r=0,.g=0,.b=0};
+  palette[1]=(struct rgb){.r=0xff,.g=0xff,.b=0xff};
+  palette[2]=(struct rgb){.r=0xab,.g=0x31,.b=0x26};
+  palette[3]=(struct rgb){.r=0x66,.g=0xda,.b=0xff};
+  palette[4]=(struct rgb){.r=0xbb,.g=0x3f,.b=0xb8};
+  palette[5]=(struct rgb){.r=0x55,.g=0xce,.b=0x58};
+  palette[6]=(struct rgb){.r=0x1d,.g=0x0e,.b=0x97};
+  palette[7]=(struct rgb){.r=0xea,.g=0xf5,.b=0x7c};
+  palette[8]=(struct rgb){.r=0xb9,.g=0x74,.b=0x18};
+  palette[9]=(struct rgb){.r=0x78,.g=0x73,.b=0x00};
+  palette[10]=(struct rgb){.r=0xdd,.g=0x93,.b=0x87};
+  palette[11]=(struct rgb){.r=0x5b,.g=0x5b,.b=0x5b};
+  palette[12]=(struct rgb){.r=0x8b,.g=0x8b,.b=0x8b};
+  palette[13]=(struct rgb){.r=0xb0,.g=0xf4,.b=0xac};
+  palette[14]=(struct rgb){.r=0xaa,.g=0x9d,.b=0xef};
+  palette[15]=(struct rgb){.r=0xb8,.g=0xb8,.b=0xb8};
+}
+
 void process_file(int mode, char *outputfilename)
 {
   int multiplier=-1;
@@ -241,24 +261,8 @@ void process_file(int mode, char *outputfilename)
     // Logo mode
 
     // Pre-load in C64 palette, so that those colours can be re-used if required
-    
-    palette[0]=(struct rgb){.r=0,.g=0,.b=0};
-    palette[1]=(struct rgb){.r=0xff,.g=0xff,.b=0xff};
-    palette[2]=(struct rgb){.r=0xab,.g=0x31,.b=0x26};
-    palette[3]=(struct rgb){.r=0x66,.g=0xda,.b=0xff};
-    palette[4]=(struct rgb){.r=0xbb,.g=0x3f,.b=0xb8};
-    palette[5]=(struct rgb){.r=0x55,.g=0xce,.b=0x58};
-    palette[6]=(struct rgb){.r=0x1d,.g=0x0e,.b=0x97};
-    palette[7]=(struct rgb){.r=0xea,.g=0xf5,.b=0x7c};
-    palette[8]=(struct rgb){.r=0xb9,.g=0x74,.b=0x18};
-    palette[9]=(struct rgb){.r=0x78,.g=0x73,.b=0x00};
-    palette[10]=(struct rgb){.r=0xdd,.g=0x93,.b=0x87};
-    palette[11]=(struct rgb){.r=0x5b,.g=0x5b,.b=0x5b};
-    palette[12]=(struct rgb){.r=0x8b,.g=0x8b,.b=0x8b};
-    palette[13]=(struct rgb){.r=0xb0,.g=0xf4,.b=0xac};
-    palette[14]=(struct rgb){.r=0xaa,.g=0x9d,.b=0xef};
-    palette[15]=(struct rgb){.r=0xb8,.g=0xb8,.b=0xb8};
-    
+
+    setup_c64_palette();
     
     for (y=0; y<height; y++) {
       png_byte* row = row_pointers[y];
@@ -479,7 +483,7 @@ void process_file(int mode, char *outputfilename)
   }
 
   /* ============================ */
-  if (mode==2) {
+  if (mode==2||mode==4) {
     printf("mode=2 (hi-res prep)\n");
     // hi-res image preparation mode
 
@@ -498,17 +502,20 @@ void process_file(int mode, char *outputfilename)
 
     int this_tile[8][8];
 
+    int tile_set[width/8+1][height/8+1];
+    
+    setup_c64_palette();
+    
     for (y=0; y<height; y+=8) {
       for (x=0; x<width; x+=8) {
 	int yy,xx;
 	int i;
-	int colour_count=0;
-	int colours[64];
 
-	printf("[%d,%d]\n",x,y);
+	//	printf("[%d,%d]\n",x,y);
 
 	total++;
 
+	// Build tile, and register/lookup all palette colours
 	for(yy=y;yy<y+8;yy++) {
 	  png_byte* row = row_pointers[yy];
 	  for(xx=x;xx<x+8;xx++) {
@@ -519,12 +526,20 @@ void process_file(int mode, char *outputfilename)
 	    } else {
 	      r=0; g=0; b=0;
 	    }
-	    int c=r+256*g+65536*b;
-	    this_tile[yy-y][xx-x]=c;
-	    for(i=0;i<colour_count;i++) if (c==colours[i]) break;
-	    if (i==colour_count) {
-	      colours[colour_count++]=c;
+
+	    int c;
+	    
+	    if (mode==2) {
+	      c=palette_lookup(r,g,b);
+	    } else {
+	      // Use red channel for alpha values
+	      c=r;
 	    }
+
+	    if (c>255) printf("Too many colours at (%d,%d)\n",x,y);
+	
+	    this_tile[yy-y][xx-x]=c;
+
 	  }
 	}
 
@@ -543,7 +558,7 @@ void process_file(int mode, char *outputfilename)
 	    for(yy=0;yy<8;yy++) {
 	      tiles[tile_count][yy][xx]=this_tile[yy][xx];
 	    }
-	  printf(".[%d]",tile_count); fflush(stdout);
+	  //	  printf(".[%d]",tile_count); fflush(stdout);
 	  tile_count++;
 	  if (tile_count>=8000) {
 	    fprintf(stderr,"Too many tiles\n");
@@ -554,19 +569,75 @@ void process_file(int mode, char *outputfilename)
 	    exit(-1);
 	  }
 	}
-
-	if (colour_count==1) ones++;
-	if (colour_count==3) threes++;
-	if (colour_count==4) fours++;
-	if (colour_count>2) {
-	  printf("%d colours in card\n",colour_count);
-	  problems++;
-	}
+	// Record tile number into image array
+	tile_set[x/8][y/8]=i;
       }
     }
     printf("%d problem tiles out of %d total tiles\n",problems,total);
     printf("%d with 3, %d with 4, %d with only one colour\n",threes,fours,ones);
     printf("%d unique tiles\n",tile_count);
+
+    // 14 bytes for initial header
+    fwrite("M65IMAGE256",12,1,outfile);
+    fputc(height/8,outfile);
+    fputc(width/8,outfile);
+    fputc(tile_count&0xff,outfile);
+    fputc(tile_count>>8,outfile);
+    
+    fprintf(stderr,"Writing out palette of %d values\n",palette_index-palette_first);
+    for(int i=0;i<256;i++){
+      int address;
+      unsigned char c;
+      int v;
+      
+      address=i+0x0040;
+      v=palette[i].r;
+      c=(v>>4)|((v&0xf)<<4);
+      fseek(outfile,address,SEEK_SET);
+      fwrite(&c,1,1,outfile);
+      
+      address=i+0x140;
+      v=palette[i].g;
+      c=(v>>4)|((v&0xf)<<4);
+      fseek(outfile,address,SEEK_SET);
+      fwrite(&c,1,1,outfile);
+
+      address=i+0x240;
+      v=palette[i].b;
+      c=(v>>4)|((v&0xf)<<4);
+      fseek(outfile,address,SEEK_SET);
+      fwrite(&c,1,1,outfile);
+    }
+    fseek(outfile,0x0340,SEEK_SET);
+    int offset=0x0340;
+
+    fprintf(stderr,"Writing out tile map...\n");
+    // Write out tile map
+    for (y=0; y<height; y+=8) {
+      for (x=0; x<width; x+=8) {
+	int tile=tile_set[x/8][y/8];
+	printf(".");
+	fputc(tile&0xff,outfile);
+	fputc(tile>>8,outfile);
+	offset+=2;
+      }
+    }
+    printf(".\n");
+    
+    // Write out tiles after aligning to 64 byte bountary
+    while (offset&63) {
+      fputc(0x00,outfile);
+      offset++;
+    }
+
+    for(int i=0;i<tile_count;i++) {
+      for (y=0; y<8;y++) {
+	for (x=0; x<8;x++) {
+	  putc(tiles[i][y][x],outfile);
+	}
+      }
+    }
+    
   }
 
   if (mode==3) {
@@ -685,6 +756,7 @@ int main(int argc, char **argv)
   if (!strcasecmp("logo",argv[1])) mode=0;
   if (!strcasecmp("charrom",argv[1])) mode=1;
   if (!strcasecmp("hires",argv[1])) mode=2;
+  if (!strcasecmp("hiresalpha",argv[1])) mode=4;
   if (!strcasecmp("sprite16",argv[1])) mode=3;
   if (mode==-1) {
     fprintf(stderr,"Usage: program_name <logo|charrom|hires|sprite16> <file_in> <file_out>\n");
