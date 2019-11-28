@@ -1,0 +1,7 @@
+byte* bP = 0x3000;
+
+kickasm(resource "interfaceResource.bin", pc bP)
+{{
+  .var data = LoadBinary("interfaceResource.bin");
+  .fill data.getSize(), data.get(i);
+}}
